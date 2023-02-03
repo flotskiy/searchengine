@@ -9,7 +9,10 @@ import java.util.List;
 @Getter
 @Setter
 @Entity
-@Table(name = "Pages", indexes = @javax.persistence.Index(name = "path_index", columnList = "path"))
+@Table(name = "Pages",
+        indexes = @Index(name = "path_index", columnList = "path"),
+        uniqueConstraints = { @UniqueConstraint(columnNames = { "path", "site_id" }) }
+)
 public class PageEntity {
 
     @Id
@@ -27,8 +30,8 @@ public class PageEntity {
 
     @ManyToOne
     @JoinColumn(name = "site_id", referencedColumnName = "id", nullable = false)
-    private SiteEntity siteId;
+    private SiteEntity siteEntity;
 
-    @OneToMany(mappedBy = "pageId", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "pageId", cascade = CascadeType.ALL)
     private List<IndexEntity> indexEntities;
 }

@@ -11,14 +11,26 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.MySQL8Dialect
     hibernate:
-      ddl-auto: create
+      ddl-auto: update
     show-sql: true
 
 indexing-settings:
   sites:
-    - url: https://www.lenta.ru
-      name: Лента.ру
-    - url: https://www.skillbox.ru
-      name: Skillbox
-    - url: https://www.playback.ru
-      name: PlayBack.Ru
+    - url: https://ipfran.ru/
+      name: ИПФРАН
+    - url: https://dombulgakova.ru/
+      name: Дом Булгакова
+    - url: http://www.playback.ru/
+      name: PlayBack.ru
+
+connect:
+  useragent: FlotskiySearchBot
+  referrer: http://www.google.com
+
+file:
+  extensions: pdf|PDF|docx?|DOCX?|xlsx?|XLSX?|pptx?|PPTX?|jpe?g|JPE?G|gif|GIF|png|PNG|mp3|MP3|mp4|MP4|aac|AAC|json|JSON|csv|CSV|exe|EXE|apk|APK|rar|RAR|zip|ZIP|xml|XML|jar|JAR|bin|BIN|svg|SVG|nc|NC|webp|WEBP|m|M|fig|FIG|eps|EPS
+
+error:
+  interrupted: Indexing stopped by user
+  certificate: Site's certificate validity check failed
+  unknown: Unknown error

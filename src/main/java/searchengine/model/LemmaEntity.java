@@ -29,6 +29,6 @@ public class LemmaEntity {
     @OnDelete(action = OnDeleteAction.CASCADE)
     private SiteEntity siteId;
 
-    @OneToMany(mappedBy = "lemmaId", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "lemmaId", cascade = CascadeType.ALL)
     private List<IndexEntity> indexEntities;
 }
