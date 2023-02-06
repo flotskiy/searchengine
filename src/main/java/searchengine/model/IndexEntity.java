@@ -1,5 +1,6 @@
 package searchengine.model;
 
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.OnDelete;
@@ -9,6 +10,7 @@ import javax.persistence.*;
 
 @Getter
 @Setter
+@EqualsAndHashCode
 @Entity
 @Table(name = "search_index")
 public class IndexEntity {

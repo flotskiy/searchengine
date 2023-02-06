@@ -2,9 +2,7 @@ package searchengine.controllers;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import searchengine.dto.statistics.StatisticsResponse;
 import searchengine.services.IndexingService;
 import searchengine.services.StatisticsService;
@@ -54,5 +52,18 @@ public class ApiController {
             result.put(ERROR_KEY, "Indexing is not started");
             return ResponseEntity.badRequest().body(result);
         }
+    }
+
+    @PostMapping("/indexPage")
+    public ResponseEntity<Map<String, Object>> indexPage(@RequestParam(name="url", required = false) String path) {
+        Map<String, Object> response = new HashMap<>();
+        if (indexingService.isPageBelongsToSiteSpecified(path)) {
+            new Thread(() -> indexingService.indexSinglePage(path)).start();
+            response.put(RESULT_KEY, true);
+            return ResponseEntity.ok(response);
+        }
+        response.put(RESULT_KEY, false);
+        response.put(ERROR_KEY, "Page is located outside the sites specified in the configuration file");
+        return ResponseEntity.badRequest().body(response);
     }
 }

@@ -1,5 +1,6 @@
 package searchengine.model;
 
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.OnDelete;
@@ -10,6 +11,7 @@ import java.util.List;
 
 @Getter
 @Setter
+@EqualsAndHashCode
 @Entity
 @Table(name = "Lemmas")
 public class LemmaEntity {

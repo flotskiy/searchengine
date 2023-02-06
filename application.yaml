@@ -16,19 +16,22 @@ spring:
 
 indexing-settings:
   sites:
-    - url: https://ipfran.ru/
-      name: ИПФРАН
+    - url: https://www.svetlovka.ru/
+      name: Светловка
     - url: https://dombulgakova.ru/
       name: Дом Булгакова
-    - url: http://www.playback.ru/
-      name: PlayBack.ru
 
 connect:
-  useragent: FlotskiySearchBot
+  useragent: Mozilla/5.0 (Windows; U; WindowsNT 5.1; en-US; rv1.8.1.6) Gecko/20070725 Firefox/2.0.0.6
   referrer: http://www.google.com
 
 file:
   extensions: pdf|PDF|docx?|DOCX?|xlsx?|XLSX?|pptx?|PPTX?|jpe?g|JPE?G|gif|GIF|png|PNG|mp3|MP3|mp4|MP4|aac|AAC|json|JSON|csv|CSV|exe|EXE|apk|APK|rar|RAR|zip|ZIP|xml|XML|jar|JAR|bin|BIN|svg|SVG|nc|NC|webp|WEBP|m|M|fig|FIG|eps|EPS
+
+selector:
+  weight:
+    title: 1.0
+    body: 0.8
 
 error:
   interrupted: Indexing stopped by user

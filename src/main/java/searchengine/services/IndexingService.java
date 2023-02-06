@@ -7,4 +7,8 @@ public interface IndexingService {
     void stopIndexing();
 
     boolean isIndexingNow();
+
+    boolean isPageBelongsToSiteSpecified(String url);
+
+    void indexSinglePage(String url);
 }
