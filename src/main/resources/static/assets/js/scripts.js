@@ -1546,7 +1546,7 @@ var API = function(){
                                 page.title +
                             '</a>' +
                             '<div class="SearchResult-description">' +
-                                page.snippet +
+                            (page.snippet.length < 310 ? page.snippet : page.snippet.substring(0, 310) + ' ...') +
                             '</div>' +
                         '</div>')
                     });

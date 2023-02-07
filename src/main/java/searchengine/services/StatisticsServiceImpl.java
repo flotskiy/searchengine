@@ -36,7 +36,8 @@ public class StatisticsServiceImpl implements StatisticsService {
         for(SiteEntity siteEntity : siteEntityList) {
             DetailedStatisticsItem item = new DetailedStatisticsItem();
             item.setName(siteEntity.getName());
-            item.setUrl(siteEntity.getUrl());
+            String siteUrl = siteEntity.getUrl();
+            item.setUrl(siteUrl.substring(0, siteUrl.length() - 1));
             int pages = countPagesBySiteEntity(siteEntity);
             int lemmas = countLemmasBySiteEntity(siteEntity);
             item.setPages(pages);

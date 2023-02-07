@@ -128,9 +128,7 @@ public class PageCrawlerService {
     }
 
     private float calculateLemmaRank(
-            String lemma,
-            Map<String, Integer> titleLemmasCount,
-            Map<String, Integer> bodyLemmasCount
+            String lemma, Map<String, Integer> titleLemmasCount, Map<String, Integer> bodyLemmasCount
     ) {
         return titleLemmasCount.getOrDefault(lemma, 0) * getWeightTitle() +
                 bodyLemmasCount.getOrDefault(lemma, 0) * getWeightBody();

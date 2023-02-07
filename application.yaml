@@ -18,6 +18,8 @@ indexing-settings:
   sites:
     - url: https://www.svetlovka.ru/
       name: Светловка
+    - url: http://www.playback.ru/
+      name: Playback
     - url: https://dombulgakova.ru/
       name: Дом Булгакова
 
@@ -32,6 +34,9 @@ selector:
   weight:
     title: 1.0
     body: 0.8
+
+snippet:
+  border: 5
 
 error:
   interrupted: Indexing stopped by user

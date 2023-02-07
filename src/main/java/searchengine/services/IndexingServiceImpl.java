@@ -152,15 +152,19 @@ public class IndexingServiceImpl implements IndexingService {
         for (String lemma : mapList.get(2).keySet()) {
             LemmaEntity lemmaEntity = pageCrawlerService.getLemmaRepository().findTopByLemmaAndSiteId(lemma, site);
             if (lemmaEntity != null) {
-                int frequency = lemmaEntity.getFrequency();
-                if (frequency == 1) {
-                    pageCrawlerService.getLemmaRepository().delete(lemmaEntity);
-                } else {
-                    frequency -= 1;
-                    lemmaEntity.setFrequency(frequency);
-                    pageCrawlerService.getLemmaRepository().save(lemmaEntity);
-                }
+                handleLemma(lemmaEntity);
             }
+        }
+    }
+
+    private void handleLemma(LemmaEntity lemmaEntity) {
+        int frequency = lemmaEntity.getFrequency();
+        if (frequency == 1) {
+            pageCrawlerService.getLemmaRepository().delete(lemmaEntity);
+        } else {
+            frequency -= 1;
+            lemmaEntity.setFrequency(frequency);
+            pageCrawlerService.getLemmaRepository().save(lemmaEntity);
         }
     }
 
@@ -209,16 +213,14 @@ public class IndexingServiceImpl implements IndexingService {
     }
 
     private String getErrorMessage(Exception e) {
-        if (e instanceof CancellationException
-                || e instanceof InterruptedException) {
+        if (e instanceof CancellationException || e instanceof InterruptedException) {
             return interruptedByUserMessage;
-        } else if (e instanceof CertificateExpiredException
-                || e instanceof SSLHandshakeException
+        } else if (e instanceof CertificateExpiredException || e instanceof SSLHandshakeException
                 || e instanceof CertPathValidatorException) {
             return certificateError;
         } else {
             e.printStackTrace();
-            return unknownError + " (" + e.getMessage() + ")";
+            return unknownError + " (" + e + ")";
         }
     }
 }

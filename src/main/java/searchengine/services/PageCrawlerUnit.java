@@ -3,6 +3,7 @@ package searchengine.services;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.SneakyThrows;
+import lombok.extern.log4j.Log4j2;
 import org.jsoup.Connection;
 import org.jsoup.UnsupportedMimeTypeException;
 import org.jsoup.nodes.Document;
@@ -14,6 +15,7 @@ import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
 
 import java.io.IOException;
+import java.net.ConnectException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CancellationException;
@@ -22,6 +24,7 @@ import java.util.concurrent.RecursiveAction;
 @Component
 @RequiredArgsConstructor
 @Setter
+@Log4j2
 public class PageCrawlerUnit extends RecursiveAction {
 
     private String pagePath;
@@ -34,7 +37,7 @@ public class PageCrawlerUnit extends RecursiveAction {
     protected void compute() throws SiteException {
         try {
             List<PageCrawlerUnit> forkJoinPoolPagesList = new ArrayList<>();
-            System.out.println("\tCreated new PageCrawler for pagePath: " + pagePath);
+            log.info("NEW PageCrawlerUnit created for pagePath: " + pagePath);
             Thread.sleep(500);
             Connection connection = service.getConnection(pagePath);
             Connection.Response response = connection.execute();
@@ -52,33 +55,35 @@ public class PageCrawlerUnit extends RecursiveAction {
                 service.savePageEntityAndSiteStatus(pageEntity, html, siteEntity);
                 service.handleLemmasAndIndex(html, pageEntity, siteEntity);
                 Elements anchors = document.select("body").select("a");
-                for (Element anchor : anchors) {
-                    String href = anchor.absUrl("href");
-                    href = href.endsWith("/") ? href : href + "/";
-                    href = href.replace("//www.", "//");
-                    if (service.isHrefValid(startPage, href)) {
-                        System.out.println("\t\t\tNew PageCrawler creation for href: " + href);
-                        service.getWebpagesPathSet().add(href);
-                        PageCrawlerUnit pageCrawlerUnit = service.createPageCrawler();
-                        pageCrawlerUnit.setPagePath(href);
-                        pageCrawlerUnit.setSiteEntity(siteEntity);
-                        forkJoinPoolPagesList.add(pageCrawlerUnit);
-                        pageCrawlerUnit.fork();
-                    } else {
-                        System.out.println("\t\tNOT created new PageCrawler for href: " + href);
-                    }
-                }
+                handleAnchors(anchors, startPage, forkJoinPoolPagesList);
             }
             for (PageCrawlerUnit pageCrawlerUnit : forkJoinPoolPagesList) {
                 pageCrawlerUnit.join();
             }
-        } catch (UnsupportedMimeTypeException unsupportedMimeTypeException) {
-            unsupportedMimeTypeException.printStackTrace();
+        } catch (UnsupportedMimeTypeException | ConnectException ignoredException) {
+            ignoredException.printStackTrace();
         } catch (CancellationException | InterruptedException | IOException cancelEx) {
-            System.out.println("\n\t\tException in PageCrawler: " + cancelEx + ", path: " + pagePath);
+            log.info("Exception '" + cancelEx + "' in PageCrawlerUnit while handling path: " + pagePath +
+                    ". Indexing for site '" + siteEntity.getUrl() + "' completed with error");
             throw cancelEx;
-        } catch (Exception exception) {
-            exception.printStackTrace();
+        } catch (Exception anotherException) {
+            anotherException.printStackTrace();
+        }
+    }
+
+    private void handleAnchors(Elements elements, String page, List<PageCrawlerUnit> fjpList) {
+        for (Element anchor : elements) {
+            String href = anchor.absUrl("href");
+            href = href.endsWith("/") ? href : href + "/";
+            href = href.replace("//www.", "//");
+            if (service.isHrefValid(page, href)) {
+                service.getWebpagesPathSet().add(href);
+                PageCrawlerUnit pageCrawlerUnit = service.createPageCrawler();
+                pageCrawlerUnit.setPagePath(href);
+                pageCrawlerUnit.setSiteEntity(siteEntity);
+                fjpList.add(pageCrawlerUnit);
+                pageCrawlerUnit.fork();
+            }
         }
     }
 }
