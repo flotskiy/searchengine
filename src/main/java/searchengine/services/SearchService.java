@@ -1,12 +1,8 @@
 package searchengine.services;
 
-import searchengine.dto.search.SearchResultResponse;
+import org.springframework.http.ResponseEntity;
 
 public interface SearchService {
 
-    boolean isQueryExists(String query);
-
-    SearchResultResponse getSearchResultPageList(String query, String url, int offset, int limit);
-
-    boolean isIndexingOrFailed(String url);
+    ResponseEntity<Object> search(String query, String site, int offset, int limit);
 }

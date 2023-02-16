@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import searchengine.dto.search.SearchResultPage;
@@ -35,12 +36,34 @@ public class SearchServiceImpl implements SearchService {
     private final PropertiesHolder properties;
 
     @Override
-    public boolean isQueryExists(String query) {
+    public ResponseEntity<Object> search(String query, String site, int offset, int limit) {
+        HashMap<String, Object> result = new HashMap<>();
+        result.put("result", false);
+        if (!isQueryExists(query)) {
+            result.put("error", "Empty search query");
+            return ResponseEntity.badRequest().body(result);
+        } else if (isIndexingOrFailed(site)) {
+            result.put("error", "Indexing not finished yet successfully");
+            return ResponseEntity.status(403).body(result);
+        }
+        SearchResultResponse searchResult = getSearchResultPageList(query, site, offset, limit);
+        return ResponseEntity.ok(searchResult);
+    }
+
+    private boolean isQueryExists(String query) {
         return StringUtil.isStringExists(query);
     }
 
-    @Override
-    public SearchResultResponse getSearchResultPageList(String query, String site, int offset, int limit) {
+    private boolean isIndexingOrFailed(String siteName) {
+        siteName = siteName + "/";
+        SiteEntity siteEntity = siteRepository.findSiteEntityByUrl(siteName);
+        if (siteEntity != null) {
+            return !siteEntity.getStatus().equals(Status.INDEXED);
+        }
+        return siteRepository.existsByStatus(Status.INDEXING) || siteRepository.existsByStatus(Status.FAILED);
+    }
+
+    private SearchResultResponse getSearchResultPageList(String query, String site, int offset, int limit) {
         site = site + "/";
         List<SearchResultPage> searchResultPageList = getSearchResultPageList(query, site);
 
@@ -62,16 +85,6 @@ public class SearchServiceImpl implements SearchService {
         searchResult.setData(dataValue);
         searchResult.setResult(true);
         return searchResult;
-    }
-
-    @Override
-    public boolean isIndexingOrFailed(String siteName) {
-        siteName = siteName + "/";
-        SiteEntity siteEntity = siteRepository.findSiteEntityByUrl(siteName);
-        if (siteEntity != null) {
-            return !siteEntity.getStatus().equals(Status.INDEXED);
-        }
-        return siteRepository.existsByStatus(Status.INDEXING) || siteRepository.existsByStatus(Status.FAILED);
     }
 
     private List<SearchResultPage> getSearchResultPageList(String query, String siteUrl) {

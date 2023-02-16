@@ -1,14 +1,14 @@
 package searchengine.services;
 
+import org.springframework.http.ResponseEntity;
+
+import java.util.Map;
+
 public interface IndexingService {
 
-    void indexAll();
+    ResponseEntity<Map<String, Object>> startIndexing();
 
-    void stopIndexing();
+    ResponseEntity<Map<String, Object>> stopIndexing();
 
-    boolean isIndexingNow();
-
-    boolean isPageBelongsToSiteSpecified(String url);
-
-    void indexSinglePage(String url);
+    ResponseEntity<Map<String, Object>> indexPage(String pagePath);
 }
