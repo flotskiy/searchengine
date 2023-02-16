@@ -3,10 +3,7 @@ package searchengine.services;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
-import org.jsoup.Connection;
-import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Service;
@@ -15,6 +12,8 @@ import searchengine.model.LemmaEntity;
 import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
 import searchengine.repository.*;
+import searchengine.util.JsoupUtil;
+import searchengine.util.PropertiesHolder;
 
 import java.util.*;
 import java.util.concurrent.ForkJoinPool;
@@ -26,23 +25,12 @@ import java.util.stream.Stream;
 @Getter
 public class PageCrawlerService {
 
-    @Value("${connect.useragent}")
-    private String useragent;
-    @Value("${connect.referrer}")
-    private String referrer;
-    @Value("${file.extensions}")
-    private String fileExtensions;
-    @Value("${selector.weight.title}")
-    private float weightTitle;
-    @Value("${selector.weight.body}")
-    private float weightBody;
-
     private final IndexRepository indexRepository;
     private final LemmaRepository lemmaRepository;
     private final PageRepository pageRepository;
     private final SiteRepository siteRepository;
     private final LemmatizerService lemmatizerService;
-    private final StringService stringService;
+    private final PropertiesHolder properties;
 
     @Setter
     private ForkJoinPool forkJoinPool = new ForkJoinPool();
@@ -56,7 +44,7 @@ public class PageCrawlerService {
     @Bean
     @Scope("prototype")
     public PageCrawlerUnit createPageCrawler() {
-        return new PageCrawlerUnit(this);
+        return new PageCrawlerUnit(this, properties);
     }
 
     public void handleLemmasAndIndex(String html, PageEntity page, SiteEntity site) {
@@ -110,7 +98,7 @@ public class PageCrawlerService {
     }
 
     public List<Map<String, Integer>> getUniqueLemmasListOfMaps(String html) {
-        Document htmlDocument = Jsoup.parse(html);
+        Document htmlDocument = JsoupUtil.parse(html);
         String title = htmlDocument.title();
         String bodyText = htmlDocument.body().text();
 
@@ -130,8 +118,8 @@ public class PageCrawlerService {
     private float calculateLemmaRank(
             String lemma, Map<String, Integer> titleLemmasCount, Map<String, Integer> bodyLemmasCount
     ) {
-        return titleLemmasCount.getOrDefault(lemma, 0) * getWeightTitle() +
-                bodyLemmasCount.getOrDefault(lemma, 0) * getWeightBody();
+        return titleLemmasCount.getOrDefault(lemma, 0) * properties.getWeightTitle() +
+                bodyLemmasCount.getOrDefault(lemma, 0) * properties.getWeightBody();
     }
 
     public PageEntity createPageEntity(String path, int code, SiteEntity siteEntity) {
@@ -140,33 +128,6 @@ public class PageCrawlerService {
         pageEntity.setCode(code);
         pageEntity.setSiteEntity(siteEntity);
         return pageEntity;
-    }
-
-    public Connection getConnection(String pagePath) {
-        return Jsoup.connect(pagePath)
-                .userAgent(useragent)
-                .referrer(referrer)
-                .ignoreHttpErrors(true);
-    }
-
-    public boolean isHrefValid(String homePage, String href) {
-        return href.startsWith(homePage)
-                && isHrefToPage(href)
-                && !isPageAdded(href)
-                && !href.equals(homePage)
-                && !href.equals(homePage + "/");
-    }
-
-    private boolean isHrefToPage(String href) {
-        if (href.matches(".*(#|\\?).*")) {
-            return false;
-        }
-        return !href.matches(".*\\.(" + fileExtensions + ")/?");
-    }
-
-    private boolean isPageAdded(String pagePath) {
-        pagePath += pagePath.endsWith("/") ? "" : "/";
-        return webpagesPathSet.contains(pagePath);
     }
 
     public void savePageEntityAndSiteStatus(PageEntity pageEntity, String pageHtml, SiteEntity siteEntity) {

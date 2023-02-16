@@ -3,13 +3,15 @@ package searchengine.services;
 import lombok.RequiredArgsConstructor;
 import org.jsoup.Connection;
 import org.jsoup.nodes.Document;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import searchengine.config.Site;
 import searchengine.config.SitesList;
 import searchengine.exceptions.SiteException;
 import searchengine.model.*;
 import searchengine.repository.SiteRepository;
+import searchengine.util.JsoupUtil;
+import searchengine.util.PropertiesHolder;
+import searchengine.util.StringUtil;
 
 import javax.net.ssl.SSLHandshakeException;
 import java.io.IOException;
@@ -23,16 +25,10 @@ import java.util.concurrent.ForkJoinPool;
 @RequiredArgsConstructor
 public class IndexingServiceImpl implements IndexingService {
 
-    @Value("${error.interrupted}")
-    private String interruptedByUserMessage;
-    @Value("${error.certificate}")
-    private String certificateError;
-    @Value("${error.unknown}")
-    private String unknownError;
-
     private final SitesList sites;
     private final SiteRepository siteRepository;
     private final PageCrawlerService pageCrawlerService;
+    private final PropertiesHolder properties;
 
     @Override
     public void indexAll() {
@@ -62,8 +58,8 @@ public class IndexingServiceImpl implements IndexingService {
         }
         List<Site> siteList = sites.getSites();
         for (Site site : siteList) {
-            String siteHomePage = pageCrawlerService.getStringService().getStartPage(site.getUrl());
-            String passedHomePage = pageCrawlerService.getStringService().getStartPage(pageUrl);
+            String siteHomePage = StringUtil.getStartPage(site.getUrl());
+            String passedHomePage = StringUtil.getStartPage(pageUrl);
             if (passedHomePage.equalsIgnoreCase(siteHomePage)) {
                 return true;
             }
@@ -73,12 +69,12 @@ public class IndexingServiceImpl implements IndexingService {
 
     @Override
     public void indexSinglePage(String pageUrl) {
-        String siteUrlFromPageUrl = pageCrawlerService.getStringService().getStartPage(pageUrl);
+        String siteUrlFromPageUrl = StringUtil.getStartPage(pageUrl);
         SiteEntity siteEntity = siteRepository.findSiteEntityByUrl(siteUrlFromPageUrl);
         if (siteEntity == null) {
             siteEntity = createSiteToHandleSinglePage(siteUrlFromPageUrl);
         }
-        Connection connection = pageCrawlerService.getConnection(pageUrl);
+        Connection connection = JsoupUtil.getConnection(pageUrl, properties.getUseragent(), properties.getReferrer());
         Connection.Response response;
         Document document;
         try {
@@ -87,16 +83,14 @@ public class IndexingServiceImpl implements IndexingService {
         } catch (IOException e) {
             throw new SiteException("Connection requests failed");
         }
-        String startPage = siteEntity.getUrl();
-        String pathToSave = pageCrawlerService.getStringService().cutProtocolAndHost(pageUrl, startPage);
-        pathToSave = pathToSave.contains(".") ? pathToSave : pathToSave + "/";
-        String html = "";
+        String pathToSave = StringUtil.getPathToSave(pageUrl, siteEntity.getUrl());
         int httpStatusCode = response.statusCode();
 
         PageEntity pageEntityToDelete =
                 pageCrawlerService.getPageRepository().findPageEntityByPathAndSiteEntity(pathToSave, siteEntity);
         pageCrawlerService.getPageRepository().delete(pageEntityToDelete);
         PageEntity pageEntity = pageCrawlerService.createPageEntity(pathToSave, httpStatusCode, siteEntity);
+        String html = "";
         if (httpStatusCode != 200) {
             pageCrawlerService.savePageEntityAndSiteStatus(pageEntity, html, siteEntity);
         } else {
@@ -128,7 +122,7 @@ public class IndexingServiceImpl implements IndexingService {
         SiteEntity siteEntity = null;
         String currentSiteHomePage;
         for (Site site : sites.getSites()) {
-            currentSiteHomePage = pageCrawlerService.getStringService().getStartPage(site.getUrl());
+            currentSiteHomePage = StringUtil.getStartPage(site.getUrl());
             if (siteHomePageToSave.equalsIgnoreCase(currentSiteHomePage)) {
                 siteEntity = prepareSiteIndexing(site);
                 break;
@@ -138,7 +132,7 @@ public class IndexingServiceImpl implements IndexingService {
     }
 
     private void fillInLemmasAndIndexTables(Site site) {
-        String homePage = pageCrawlerService.getStringService().getStartPage(site.getUrl());
+        String homePage = StringUtil.getStartPage(site.getUrl());
         int siteEntityId = siteRepository.findSiteEntityByUrl(homePage).getId();
         Map<String, LemmaEntity> lemmaEntityMap = pageCrawlerService.getLemmasMap().get(siteEntityId);
         pageCrawlerService.getLemmaRepository().saveAll(lemmaEntityMap.values());
@@ -184,7 +178,7 @@ public class IndexingServiceImpl implements IndexingService {
     }
 
     private SiteEntity prepareSiteIndexing(Site site) {
-        String homePage = pageCrawlerService.getStringService().getStartPage(site.getUrl());
+        String homePage = StringUtil.getStartPage(site.getUrl());
         siteRepository.deleteSiteEntityByUrl(homePage);
         SiteEntity siteEntity = new SiteEntity();
         siteEntity.setStatus(Status.INDEXING);
@@ -196,7 +190,7 @@ public class IndexingServiceImpl implements IndexingService {
 
     private void fixError(Site site, Exception e) {
         String error = getErrorMessage(e);
-        String homePage = pageCrawlerService.getStringService().getStartPage(site.getUrl());
+        String homePage = StringUtil.getStartPage(site.getUrl());
         SiteEntity siteEntity = siteRepository.findSiteEntityByUrl(homePage);
         siteEntity.setStatusTime(new Date());
         siteEntity.setStatus(Status.FAILED);
@@ -205,7 +199,7 @@ public class IndexingServiceImpl implements IndexingService {
     }
 
     private void markAsIndexed(Site site) {
-        String homePage = pageCrawlerService.getStringService().getStartPage(site.getUrl());
+        String homePage = StringUtil.getStartPage(site.getUrl());
         SiteEntity siteEntity = siteRepository.findSiteEntityByUrl(homePage);
         siteEntity.setStatusTime(new Date());
         siteEntity.setStatus(Status.INDEXED);
@@ -214,13 +208,13 @@ public class IndexingServiceImpl implements IndexingService {
 
     private String getErrorMessage(Exception e) {
         if (e instanceof CancellationException || e instanceof InterruptedException) {
-            return interruptedByUserMessage;
+            return properties.getInterruptedByUserMessage();
         } else if (e instanceof CertificateExpiredException || e instanceof SSLHandshakeException
                 || e instanceof CertPathValidatorException) {
-            return certificateError;
+            return properties.getCertificateError();
         } else {
             e.printStackTrace();
-            return unknownError + " (" + e + ")";
+            return properties.getUnknownError() + " (" + e + ")";
         }
     }
 }

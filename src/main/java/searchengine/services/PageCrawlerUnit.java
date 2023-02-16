@@ -13,6 +13,9 @@ import org.springframework.stereotype.Component;
 import searchengine.exceptions.SiteException;
 import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
+import searchengine.util.JsoupUtil;
+import searchengine.util.PropertiesHolder;
+import searchengine.util.StringUtil;
 
 import java.io.IOException;
 import java.net.ConnectException;
@@ -31,18 +34,19 @@ public class PageCrawlerUnit extends RecursiveAction {
     private transient SiteEntity siteEntity;
 
     private final transient PageCrawlerService service;
+    private final transient PropertiesHolder properties;
 
     @SneakyThrows
     @Override
     protected void compute() throws SiteException {
         try {
             List<PageCrawlerUnit> forkJoinPoolPagesList = new ArrayList<>();
-            log.info("NEW PageCrawlerUnit created for pagePath: " + pagePath);
+            log.info("NEW PageCrawlerUnit created for pagePath: {}", pagePath);
             Thread.sleep(500);
-            Connection connection = service.getConnection(pagePath);
+            Connection connection = JsoupUtil.getConnection(pagePath, properties.getUseragent(), properties.getReferrer());
             Connection.Response response = connection.execute();
             String startPage = siteEntity.getUrl();
-            String pathToSave = service.getStringService().cutProtocolAndHost(pagePath, startPage);
+            String pathToSave = StringUtil.cutProtocolAndHost(pagePath, startPage);
             String html = "";
             int httpStatusCode = response.statusCode();
 
@@ -63,8 +67,8 @@ public class PageCrawlerUnit extends RecursiveAction {
         } catch (UnsupportedMimeTypeException | ConnectException ignoredException) {
             ignoredException.printStackTrace();
         } catch (CancellationException | InterruptedException | IOException cancelEx) {
-            log.info("Exception '" + cancelEx + "' in PageCrawlerUnit while handling path: " + pagePath +
-                    ". Indexing for site '" + siteEntity.getUrl() + "' completed with error");
+            log.info("Exception '{}' in PageCrawlerUnit while handling path: {}. " +
+                    "Indexing for site '{}' completed with error", cancelEx, pagePath, siteEntity.getUrl());
             throw cancelEx;
         } catch (Exception anotherException) {
             anotherException.printStackTrace();
@@ -73,10 +77,8 @@ public class PageCrawlerUnit extends RecursiveAction {
 
     private void handleAnchors(Elements elements, String page, List<PageCrawlerUnit> fjpList) {
         for (Element anchor : elements) {
-            String href = anchor.absUrl("href");
-            href = href.endsWith("/") ? href : href + "/";
-            href = href.replace("//www.", "//");
-            if (service.isHrefValid(page, href)) {
+            String href = StringUtil.getHrefFromAnchor(anchor);
+            if (StringUtil.isHrefValid(service.getWebpagesPathSet(), page, href, properties.getFileExtensions())) {
                 service.getWebpagesPathSet().add(href);
                 PageCrawlerUnit pageCrawlerUnit = service.createPageCrawler();
                 pageCrawlerUnit.setPagePath(href);

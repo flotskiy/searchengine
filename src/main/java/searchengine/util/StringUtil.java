@@ -1,20 +1,20 @@
-package searchengine.services;
+package searchengine.util;
 
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
+import lombok.experimental.UtilityClass;
+import org.jsoup.nodes.Element;
 import searchengine.exceptions.SiteException;
 
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 
-@Service
-public class StringService {
+@UtilityClass
+public class StringUtil {
 
-    @Value("${snippet.border}")
-    private int snippetBorder;
+    private final String SLASH = "/";
 
     public String cutSlash(String siteNameWithSlash) {
         return siteNameWithSlash.substring(0, siteNameWithSlash.length() - 1);
@@ -29,7 +29,7 @@ public class StringService {
         }
         String domain = url.getHost();
         domain = domain.startsWith("www.") ? domain.substring(4) : domain;
-        return url.getProtocol() + "://" + domain + "/";
+        return url.getProtocol() + "://" + domain + SLASH;
     }
 
     public String cutProtocolAndHost(String pagePath, String homePage) {
@@ -37,11 +37,11 @@ public class StringService {
         if (path.contains(".")) {
             path = path.substring(0, path.length() - 1);
         }
-        path = path.startsWith("/") ? path : "/" + path;
+        path = path.startsWith(SLASH) ? path : SLASH + path;
         return path;
     }
 
-    public String buildSnippet(List<String> textList, List<Integer> lemmasPositions) {
+    public String buildSnippet(List<String> textList, List<Integer> lemmasPositions, int snippetBorder) {
         StringBuilder builder = new StringBuilder();
         int start = 0;
         int end = -1;
@@ -62,7 +62,7 @@ public class StringService {
             if (end >= textList.size()) {
                 end = textList.size() - 1;
             }
-            if (isLastEntry(entry, lemmasPositions)) {
+            if (isLastEntry(entry, lemmasPositions, snippetBorder)) {
                 buildStringBuilder(builder, textList, lemmasPositions, start, end);
             }
         }
@@ -72,7 +72,42 @@ public class StringService {
         return builder.toString();
     }
 
-    private boolean isLastEntry(Map.Entry<Integer, Integer> entry, List<Integer> lemmasPositions) {
+    public boolean isStringExists(String s) {
+        return !(s == null || s.matches("\\s+") || s.isEmpty());
+    }
+
+    public String getPathToSave(String pageUrl, String startPage) {
+        String pathToSave = StringUtil.cutProtocolAndHost(pageUrl, startPage);
+        return pathToSave.contains(".") ? pathToSave : pathToSave + SLASH;
+    }
+
+    public boolean isHrefValid(Set<String> webpages, String homePage, String href, String fileExtensions) {
+        return href.startsWith(homePage)
+                && isHrefToPage(href, fileExtensions)
+                && !isPageAdded(webpages, href)
+                && !href.equals(homePage)
+                && !href.equals(homePage + "/");
+    }
+
+    public String getHrefFromAnchor(Element anchor) {
+        String href = anchor.absUrl("href");
+        href = href.endsWith("/") ? href : href + "/";
+        return href.replace("//www.", "//");
+    }
+
+    private boolean isHrefToPage(String href, String fileExtensions) {
+        if (href.matches(".*(#|\\?).*")) {
+            return false;
+        }
+        return !href.matches(".*\\.(" + fileExtensions + ")/?");
+    }
+
+    private boolean isPageAdded(Set<String> webpages, String pagePath) {
+        pagePath += pagePath.endsWith("/") ? "" : "/";
+        return webpages.contains(pagePath);
+    }
+
+    private boolean isLastEntry(Map.Entry<Integer, Integer> entry, List<Integer> lemmasPositions, int snippetBorder) {
         return (entry.getValue() - snippetBorder) == lemmasPositions.get(lemmasPositions.size() - 1);
     }
 
@@ -92,9 +127,5 @@ public class StringService {
                 builder.deleteCharAt(builder.length() - 1).append(" ...&emsp;&emsp;");
             }
         }
-    }
-
-    public boolean isStringExists(String s) {
-        return !(s == null || s.matches("\\s+") || s.isEmpty());
     }
 }

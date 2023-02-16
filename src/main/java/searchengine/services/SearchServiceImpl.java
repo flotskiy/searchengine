@@ -16,6 +16,8 @@ import searchengine.repository.IndexRepository;
 import searchengine.repository.LemmaRepository;
 import searchengine.repository.PageRepository;
 import searchengine.repository.SiteRepository;
+import searchengine.util.PropertiesHolder;
+import searchengine.util.StringUtil;
 
 import javax.persistence.EntityNotFoundException;
 import java.util.*;
@@ -25,16 +27,16 @@ import java.util.*;
 @Log4j2
 public class SearchServiceImpl implements SearchService {
 
-    private final StringService stringService;
     private final LemmatizerService lemmatizerService;
     private final SiteRepository siteRepository;
     private final PageRepository pageRepository;
     private final LemmaRepository lemmaRepository;
     private final IndexRepository indexRepository;
+    private final PropertiesHolder properties;
 
     @Override
     public boolean isQueryExists(String query) {
-        return stringService.isStringExists(query);
+        return StringUtil.isStringExists(query);
     }
 
     @Override
@@ -108,7 +110,7 @@ public class SearchServiceImpl implements SearchService {
             List<SearchResultPage> listToAdd, PageEntity pageEntity, Map<List<Integer>, List<String>> map
     ) {
         SiteEntity tempSite = pageEntity.getSiteEntity();
-        String siteUrl = stringService.cutSlash(tempSite.getUrl());
+        String siteUrl = StringUtil.cutSlash(tempSite.getUrl());
         String siteName = tempSite.getName();
         String pagePath = pageEntity.getPath();
         Document document = Jsoup.parse(pageEntity.getContent());
@@ -194,7 +196,7 @@ public class SearchServiceImpl implements SearchService {
         if (lemmasPositions.isEmpty()) {
             return "";
         }
-        return stringService.buildSnippet(textList, lemmasPositions);
+        return StringUtil.buildSnippet(textList, lemmasPositions, properties.getSnippetBorder());
     }
 
     private List<SearchResultPage> leaveSearchResultMethodAndReturnEmptyList() {
