@@ -1,4 +1,4 @@
-package searchengine.services;
+package searchengine.services.interfaces;
 
 import org.springframework.http.ResponseEntity;
 

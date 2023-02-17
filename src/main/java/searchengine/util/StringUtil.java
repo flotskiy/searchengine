@@ -81,12 +81,16 @@ public class StringUtil {
         return pathToSave.contains(".") ? pathToSave : pathToSave + SLASH;
     }
 
-    public boolean isHrefValid(Set<String> webpages, String homePage, String href, String fileExtensions) {
+    public boolean isHrefValid(String homePage, String href, String fileExtensions) {
         return href.startsWith(homePage)
                 && isHrefToPage(href, fileExtensions)
-                && !isPageAdded(webpages, href)
                 && !href.equals(homePage)
                 && !href.equals(homePage + "/");
+    }
+
+    public boolean isPageAdded(Set<String> webpages, String href) {
+        href += href.endsWith("/") ? "" : "/";
+        return webpages.contains(href);
     }
 
     public String getHrefFromAnchor(Element anchor) {
@@ -100,11 +104,6 @@ public class StringUtil {
             return false;
         }
         return !href.matches(".*\\.(" + fileExtensions + ")/?");
-    }
-
-    private boolean isPageAdded(Set<String> webpages, String pagePath) {
-        pagePath += pagePath.endsWith("/") ? "" : "/";
-        return webpages.contains(pagePath);
     }
 
     private boolean isLastEntry(Map.Entry<Integer, Integer> entry, List<Integer> lemmasPositions, int snippetBorder) {

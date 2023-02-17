@@ -4,9 +4,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import searchengine.dto.statistics.StatisticsResponse;
-import searchengine.services.IndexingService;
-import searchengine.services.SearchService;
-import searchengine.services.StatisticsService;
+import searchengine.services.interfaces.IndexingService;
+import searchengine.services.interfaces.SearchService;
+import searchengine.services.interfaces.StatisticsService;
 
 import java.util.Map;
 

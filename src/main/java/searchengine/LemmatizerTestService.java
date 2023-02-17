@@ -2,8 +2,8 @@ package searchengine;
 
 import org.apache.lucene.morphology.LuceneMorphology;
 import org.apache.lucene.morphology.russian.RussianLuceneMorphology;
-import searchengine.services.LemmatizerService;
-import searchengine.services.LemmatizerServiceImpl;
+import searchengine.services.interfaces.LemmatizerService;
+import searchengine.services.implementations.LemmatizerServiceImpl;
 
 import java.io.IOException;
 import java.util.*;

@@ -1,4 +1,4 @@
-package searchengine.services;
+package searchengine.services.implementations;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -17,6 +17,8 @@ import searchengine.repository.IndexRepository;
 import searchengine.repository.LemmaRepository;
 import searchengine.repository.PageRepository;
 import searchengine.repository.SiteRepository;
+import searchengine.services.interfaces.LemmatizerService;
+import searchengine.services.interfaces.SearchService;
 import searchengine.util.PropertiesHolder;
 import searchengine.util.StringUtil;
 

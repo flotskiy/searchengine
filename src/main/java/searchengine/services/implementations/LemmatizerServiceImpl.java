@@ -1,8 +1,9 @@
-package searchengine.services;
+package searchengine.services.implementations;
 
 import lombok.RequiredArgsConstructor;
 import org.apache.lucene.morphology.LuceneMorphology;
 import org.springframework.stereotype.Service;
+import searchengine.services.interfaces.LemmatizerService;
 
 import java.util.Arrays;
 import java.util.HashMap;
