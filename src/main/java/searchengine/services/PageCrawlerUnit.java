@@ -8,9 +8,9 @@ import org.jsoup.UnsupportedMimeTypeException;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
-import searchengine.exceptions.SiteException;
 import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
+import searchengine.model.Status;
 import searchengine.services.implementations.IndexingServiceImpl;
 import searchengine.util.JsoupUtil;
 import searchengine.util.StringUtil;
@@ -19,7 +19,6 @@ import java.io.IOException;
 import java.net.ConnectException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CancellationException;
 import java.util.concurrent.RecursiveAction;
 
 @RequiredArgsConstructor
@@ -32,25 +31,23 @@ public class PageCrawlerUnit extends RecursiveAction {
 
     @SneakyThrows
     @Override
-    protected void compute() throws SiteException {
+    protected void compute() {
         log.info("NEW PageCrawlerUnit created for pagePath: {}", pagePath);
         try {
+            Thread.sleep(500);
             handlePageData();
         } catch (UnsupportedMimeTypeException | ConnectException ignoredException) {
-            log.warn(ignoredException);
-        } catch (CancellationException | InterruptedException | IOException cancelEx) {
+            log.warn("Exception '{}' ignored in PageCrawlerUnit while handling path: {}", ignoredException, pagePath);
+        } catch (Exception exception) {
             log.warn("Exception '{}' in PageCrawlerUnit while handling path: {}. " +
-                    "Indexing for site '{}' completed with error", cancelEx, pagePath, siteEntity.getUrl());
-            throw cancelEx;
-        } catch (Exception anotherException) {
-            log.warn(anotherException);
+                    "Indexing for site '{}' completed with error", exception, pagePath, siteEntity.getUrl());
+            service.getStatusMap().put(siteEntity.getUrl(), Status.FAILED);
+            throw exception;
         }
     }
 
-    private void handlePageData() throws InterruptedException, IOException {
-        Thread.sleep(500);
+    private void handlePageData() throws IOException {
         List<PageCrawlerUnit> forkJoinPoolPagesList = new ArrayList<>();
-
         String userAgent = service.getProperties().getUseragent();
         String referrer = service.getProperties().getReferrer();
         Connection connection = JsoupUtil.getConnection(pagePath, userAgent, referrer);
@@ -81,6 +78,9 @@ public class PageCrawlerUnit extends RecursiveAction {
             if (StringUtil.isHrefValid(siteEntity.getUrl(), href, fileExtensions)
                     && !StringUtil.isPageAdded(service.getWebpagesPathSet(), href)) {
                 service.getWebpagesPathSet().add(href);
+                if (!service.getStatusMap().get(siteEntity.getUrl()).equals(Status.INDEXING)) {
+                    return;
+                }
                 PageCrawlerUnit pageCrawlerUnit = new PageCrawlerUnit(service, siteEntity, href);
                 fjpList.add(pageCrawlerUnit);
                 pageCrawlerUnit.fork();

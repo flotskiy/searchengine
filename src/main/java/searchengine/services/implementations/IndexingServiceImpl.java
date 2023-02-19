@@ -20,6 +20,8 @@ import searchengine.util.PropertiesHolder;
 import searchengine.util.StringUtil;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ForkJoinPool;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -44,6 +46,8 @@ public class IndexingServiceImpl implements IndexingService {
     private Set<String> webpagesPathSet;
     private Map<Integer, Map<String, LemmaEntity>> lemmasMap;
     private Map<Integer, Set<IndexEntity>> indexEntityMap;
+    @Getter
+    private ConcurrentMap<String, Status> statusMap;
 
     @Override
     public ResponseEntity<Map<String, Object>> startIndexing() {
@@ -98,7 +102,9 @@ public class IndexingServiceImpl implements IndexingService {
     }
 
     public void savePageContentAndSiteStatus(PageEntity pageEntity, String pageHtml, SiteEntity siteEntity) {
-        if (!forkJoinPool.isTerminating() && !forkJoinPool.isTerminated()) {
+        if (!forkJoinPool.isTerminating()
+                && !forkJoinPool.isTerminated()
+                && !statusMap.get(siteEntity.getUrl()).equals(Status.FAILED)) {
             siteAndPageService.savePageContentAndSiteStatus(pageEntity, pageHtml, siteEntity);
         }
     }
@@ -167,8 +173,11 @@ public class IndexingServiceImpl implements IndexingService {
         lemmasMap = new HashMap<>();
         indexEntityMap = new HashMap<>();
         webpagesPathSet = Collections.synchronizedSet(new HashSet<>());
+        statusMap = new ConcurrentHashMap<>();
         for (Site site : sites.getSites()) {
-            new Thread(() -> indexSingleSite(site)).start();
+            Thread thread = new Thread(() -> indexSingleSite(site));
+            thread.setName(site.getName());
+            thread.start();
         }
     }
 
@@ -198,9 +207,9 @@ public class IndexingServiceImpl implements IndexingService {
             fillInLemmasAndIndexTables(site);
             siteAndPageService.markSiteAsIndexed(site);
         } catch (Exception exception) {
-            exception.printStackTrace();
-            fillInLemmasAndIndexTables(site);
+            log.warn("FAILED to complete indexing '{}' due to '{}'", site.getName(), exception);
             siteAndPageService.fixSiteIndexingError(site, exception);
+            clearLemmasAndIndexCollections(site);
         }
     }
 
@@ -273,6 +282,13 @@ public class IndexingServiceImpl implements IndexingService {
         indexEntityMap.get(siteEntityId).clear();
     }
 
+    private void clearLemmasAndIndexCollections(Site site) {
+        String homePage = StringUtil.getStartPage(site.getUrl());
+        int siteEntityId = siteAndPageService.findSiteEntityByUrl(homePage).getId();
+        lemmasMap.get(siteEntityId).clear();
+        indexEntityMap.get(siteEntityId).clear();
+    }
+
     private void correctAllPageLemmaFrequency(String text, SiteEntity site) {
         List<Map<String, Integer>> mapList = getUniqueLemmasListOfMaps(text);
         for (String lemma : mapList.get(2).keySet()) {
@@ -285,6 +301,7 @@ public class IndexingServiceImpl implements IndexingService {
 
     private PageCrawlerUnit handleSite(Site siteToHandle) {
         SiteEntity siteEntity = siteAndPageService.prepareSiteIndexing(siteToHandle);
+        statusMap.put(siteEntity.getUrl(), Status.INDEXING);
         Map<String, LemmaEntity> stringLemmaEntityMap = new HashMap<>();
         lemmasMap.put(siteEntity.getId(), stringLemmaEntityMap);
         Set<IndexEntity> indexEntitySet = new HashSet<>();

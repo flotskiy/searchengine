@@ -39,6 +39,7 @@ public class SiteAndPageServiceImpl implements SiteAndPageService {
         SiteEntity oldSiteEntity = siteRepository.findSiteEntityByUrl(homePage);
         if (oldSiteEntity != null) {
             oldSiteEntity.setStatus(Status.INDEXING);
+            oldSiteEntity.setStatusTime(new Date());
             siteRepository.save(oldSiteEntity);
             siteRepository.deleteSiteEntityByUrl(homePage);
         }
@@ -101,15 +102,13 @@ public class SiteAndPageServiceImpl implements SiteAndPageService {
     }
 
     private String getErrorMessage(Exception e) {
+        log.warn("Creating error message for: '{}'", e.toString());
         if (e instanceof CancellationException || e instanceof InterruptedException) {
-            log.warn(e);
             return properties.getInterruptedByUserMessage();
         } else if (e instanceof CertificateExpiredException || e instanceof SSLHandshakeException
                 || e instanceof CertPathValidatorException) {
-            log.warn(e);
             return properties.getCertificateError();
         } else {
-            log.warn(e);
             return properties.getUnknownError() + " (" + e + ")";
         }
     }
