@@ -10,11 +10,10 @@ import org.springframework.stereotype.Service;
 import searchengine.config.Site;
 import searchengine.config.SitesList;
 import searchengine.model.*;
-import searchengine.services.interfaces.LemmaAndIndexService;
 import searchengine.services.interfaces.LemmatizerService;
 import searchengine.services.PageCrawlerUnit;
-import searchengine.services.interfaces.SiteAndPageService;
 import searchengine.services.interfaces.IndexingService;
+import searchengine.services.interfaces.RepoAccessService;
 import searchengine.util.JsoupUtil;
 import searchengine.util.PropertiesHolder;
 import searchengine.util.StringUtil;
@@ -35,8 +34,7 @@ public class IndexingServiceImpl implements IndexingService {
     private static final String ERROR_KEY = "error";
 
     private final SitesList sites;
-    private final SiteAndPageService siteAndPageService;
-    private final LemmaAndIndexService lemmaAndIndexService;
+    private final RepoAccessService repoAccessService;
     private final LemmatizerService lemmatizerService;
     @Getter
     private final PropertiesHolder properties;
@@ -98,14 +96,14 @@ public class IndexingServiceImpl implements IndexingService {
     }
 
     public PageEntity createPageEntity(String path, int code, SiteEntity siteEntity) {
-        return siteAndPageService.createPageEntity(path, code, siteEntity);
+        return repoAccessService.createPageEntity(path, code, siteEntity);
     }
 
     public void savePageContentAndSiteStatus(PageEntity pageEntity, String pageHtml, SiteEntity siteEntity) {
         if (!forkJoinPool.isTerminating()
                 && !forkJoinPool.isTerminated()
                 && !statusMap.get(siteEntity.getUrl()).equals(Status.FAILED)) {
-            siteAndPageService.savePageContentAndSiteStatus(pageEntity, pageHtml, siteEntity);
+            repoAccessService.savePageContentAndSiteStatus(pageEntity, pageHtml, siteEntity);
         }
     }
 
@@ -157,7 +155,7 @@ public class IndexingServiceImpl implements IndexingService {
         for (Site site : sites.getSites()) {
             currentSiteHomePage = StringUtil.getStartPage(site.getUrl());
             if (siteHomePageToSave.equalsIgnoreCase(currentSiteHomePage)) {
-                siteEntity = siteAndPageService.prepareSiteIndexing(site);
+                siteEntity = repoAccessService.prepareSiteIndexing(site);
                 break;
             }
         }
@@ -205,10 +203,10 @@ public class IndexingServiceImpl implements IndexingService {
             PageCrawlerUnit pageCrawlerUnit = handleSite(site);
             forkJoinPool.invoke(pageCrawlerUnit);
             fillInLemmasAndIndexTables(site);
-            siteAndPageService.markSiteAsIndexed(site);
+            repoAccessService.markSiteAsIndexed(site);
         } catch (Exception exception) {
             log.warn("FAILED to complete indexing '{}' due to '{}'", site.getName(), exception);
-            siteAndPageService.fixSiteIndexingError(site, exception);
+            repoAccessService.fixSiteIndexingError(site, exception);
             clearLemmasAndIndexCollections(site);
         }
     }
@@ -221,7 +219,7 @@ public class IndexingServiceImpl implements IndexingService {
         String pathToSave = StringUtil.getPathToSave(pageUrl, siteEntity.getUrl());
         int httpStatusCode = response.statusCode();
 
-        PageEntity pageEntityDeleted = siteAndPageService.deleteOldPageEntity(pathToSave, siteEntity);
+        PageEntity pageEntityDeleted = repoAccessService.deleteOldPageEntity(pathToSave, siteEntity);
         PageEntity pageEntity = createPageEntity(pathToSave, httpStatusCode, siteEntity);
         String html = "";
         if (httpStatusCode != 200) {
@@ -234,12 +232,12 @@ public class IndexingServiceImpl implements IndexingService {
             savePageContentAndSiteStatus(pageEntity, html, siteEntity);
             handleLemmasAndIndexOnSinglePage(html, pageEntity, siteEntity);
         }
-        siteAndPageService.fixSiteStatusAfterSinglePageIndexed(siteEntity);
+        repoAccessService.fixSiteStatusAfterSinglePageIndexed(siteEntity);
     }
 
     private SiteEntity findOrCreateNewSiteEntity(String url) {
         String siteUrlFromPageUrl = StringUtil.getStartPage(url);
-        SiteEntity siteEntity = siteAndPageService.findSiteEntityByUrl(siteUrlFromPageUrl);
+        SiteEntity siteEntity = repoAccessService.findSiteEntityByUrl(siteUrlFromPageUrl);
         if (siteEntity == null) {
             siteEntity = createSiteToHandleSinglePage(siteUrlFromPageUrl);
         }
@@ -250,7 +248,7 @@ public class IndexingServiceImpl implements IndexingService {
         List<Map<String, Integer>> mapList = getUniqueLemmasListOfMaps(html);
         Set<IndexEntity> indexEntities = new HashSet<>();
         for (String lemma : mapList.get(2).keySet()) {
-            LemmaEntity lemmaEntity = lemmaAndIndexService.findLemmaEntityByLemmaAndSiteId(lemma, site);
+            LemmaEntity lemmaEntity = repoAccessService.findLemmaEntityByLemmaAndSiteId(lemma, site);
             if (lemmaEntity == null) {
                 lemmaEntity = new LemmaEntity();
                 lemmaEntity.setLemma(lemma);
@@ -260,7 +258,7 @@ public class IndexingServiceImpl implements IndexingService {
                 int currentFrequency = lemmaEntity.getFrequency();
                 lemmaEntity.setFrequency(currentFrequency + 1);
             }
-            lemmaAndIndexService.saveLemma(lemmaEntity);
+            repoAccessService.saveLemma(lemmaEntity);
 
             float lemmaRank = calculateLemmaRank(lemma, mapList.get(0), mapList.get(1));
             IndexEntity indexEntity = new IndexEntity();
@@ -269,22 +267,22 @@ public class IndexingServiceImpl implements IndexingService {
             indexEntity.setLemmaRank(lemmaRank);
             indexEntities.add(indexEntity);
         }
-        lemmaAndIndexService.saveIndexCollection(indexEntities);
+        repoAccessService.saveIndexCollection(indexEntities);
     }
 
     private void fillInLemmasAndIndexTables(Site site) {
         String homePage = StringUtil.getStartPage(site.getUrl());
-        int siteEntityId = siteAndPageService.findSiteEntityByUrl(homePage).getId();
+        int siteEntityId = repoAccessService.findSiteEntityByUrl(homePage).getId();
         Map<String, LemmaEntity> lemmaEntityMap = lemmasMap.get(siteEntityId);
-        lemmaAndIndexService.saveLemmaCollection(lemmaEntityMap.values());
+        repoAccessService.saveLemmaCollection(lemmaEntityMap.values());
         lemmasMap.get(siteEntityId).clear();
-        lemmaAndIndexService.saveIndexCollection(indexEntityMap.get(siteEntityId));
+        repoAccessService.saveIndexCollection(indexEntityMap.get(siteEntityId));
         indexEntityMap.get(siteEntityId).clear();
     }
 
     private void clearLemmasAndIndexCollections(Site site) {
         String homePage = StringUtil.getStartPage(site.getUrl());
-        int siteEntityId = siteAndPageService.findSiteEntityByUrl(homePage).getId();
+        int siteEntityId = repoAccessService.findSiteEntityByUrl(homePage).getId();
         lemmasMap.get(siteEntityId).clear();
         indexEntityMap.get(siteEntityId).clear();
     }
@@ -292,15 +290,15 @@ public class IndexingServiceImpl implements IndexingService {
     private void correctAllPageLemmaFrequency(String text, SiteEntity site) {
         List<Map<String, Integer>> mapList = getUniqueLemmasListOfMaps(text);
         for (String lemma : mapList.get(2).keySet()) {
-            LemmaEntity lemmaEntity = lemmaAndIndexService.findLemmaEntityByLemmaAndSiteId(lemma, site);
+            LemmaEntity lemmaEntity = repoAccessService.findLemmaEntityByLemmaAndSiteId(lemma, site);
             if (lemmaEntity != null) {
-                lemmaAndIndexService.correctSingleLemmaFrequency(lemmaEntity);
+                repoAccessService.correctSingleLemmaFrequency(lemmaEntity);
             }
         }
     }
 
     private PageCrawlerUnit handleSite(Site siteToHandle) {
-        SiteEntity siteEntity = siteAndPageService.prepareSiteIndexing(siteToHandle);
+        SiteEntity siteEntity = repoAccessService.prepareSiteIndexing(siteToHandle);
         statusMap.put(siteEntity.getUrl(), Status.INDEXING);
         Map<String, LemmaEntity> stringLemmaEntityMap = new HashMap<>();
         lemmasMap.put(siteEntity.getId(), stringLemmaEntityMap);

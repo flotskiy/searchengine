@@ -1,10 +1,14 @@
 package searchengine.services.interfaces;
 
 import searchengine.config.Site;
+import searchengine.model.IndexEntity;
+import searchengine.model.LemmaEntity;
 import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
 
-public interface SiteAndPageService {
+import java.util.Collection;
+
+public interface RepoAccessService {
 
     SiteEntity findSiteEntityByUrl(String url);
 
@@ -21,4 +25,14 @@ public interface SiteAndPageService {
     void markSiteAsIndexed(Site site);
 
     void fixSiteIndexingError(Site site, Exception exception);
+
+    LemmaEntity findLemmaEntityByLemmaAndSiteId(String lemma, SiteEntity siteEntity);
+
+    void saveLemma(LemmaEntity lemmaEntity);
+
+    void saveLemmaCollection(Collection<LemmaEntity> lemmaEntityCollection);
+
+    void saveIndexCollection(Collection<IndexEntity> indexEntityCollection);
+
+    void correctSingleLemmaFrequency(LemmaEntity lemmaEntity);
 }

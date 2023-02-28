@@ -4,28 +4,31 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 import searchengine.config.Site;
-import searchengine.model.PageEntity;
-import searchengine.model.SiteEntity;
-import searchengine.model.Status;
+import searchengine.model.*;
+import searchengine.repository.IndexRepository;
+import searchengine.repository.LemmaRepository;
 import searchengine.repository.PageRepository;
 import searchengine.repository.SiteRepository;
-import searchengine.services.interfaces.SiteAndPageService;
+import searchengine.services.interfaces.RepoAccessService;
 import searchengine.util.PropertiesHolder;
 import searchengine.util.StringUtil;
 
 import javax.net.ssl.SSLHandshakeException;
 import java.security.cert.CertPathValidatorException;
 import java.security.cert.CertificateExpiredException;
+import java.util.Collection;
 import java.util.Date;
 import java.util.concurrent.CancellationException;
 
 @Service
 @RequiredArgsConstructor
 @Log4j2
-public class SiteAndPageServiceImpl implements SiteAndPageService {
+public class RepoAccessServiceImpl implements RepoAccessService {
 
     private final SiteRepository siteRepository;
     private final PageRepository pageRepository;
+    private final LemmaRepository lemmaRepository;
+    private final IndexRepository indexRepository;
     private final PropertiesHolder properties;
 
     @Override
@@ -99,6 +102,38 @@ public class SiteAndPageServiceImpl implements SiteAndPageService {
     public void fixSiteStatusAfterSinglePageIndexed(SiteEntity site) {
         site.setStatus(Status.INDEXED);
         siteRepository.save(site);
+    }
+
+    @Override
+    public LemmaEntity findLemmaEntityByLemmaAndSiteId(String lemma, SiteEntity siteEntity) {
+        return lemmaRepository.findTopByLemmaAndSiteId(lemma, siteEntity);
+    }
+
+    @Override
+    public void saveLemma(LemmaEntity lemmaEntity) {
+        lemmaRepository.save(lemmaEntity);
+    }
+
+    @Override
+    public void saveLemmaCollection(Collection<LemmaEntity> lemmaEntityCollection) {
+        lemmaRepository.saveAll(lemmaEntityCollection);
+    }
+
+    @Override
+    public void saveIndexCollection(Collection<IndexEntity> indexEntityCollection) {
+        indexRepository.saveAll(indexEntityCollection);
+    }
+
+    @Override
+    public void correctSingleLemmaFrequency(LemmaEntity lemmaEntity) {
+        int frequency = lemmaEntity.getFrequency();
+        if (frequency == 1) {
+            lemmaRepository.delete(lemmaEntity);
+        } else {
+            frequency -= 1;
+            lemmaEntity.setFrequency(frequency);
+            lemmaRepository.save(lemmaEntity);
+        }
     }
 
     private String getErrorMessage(Exception e) {
