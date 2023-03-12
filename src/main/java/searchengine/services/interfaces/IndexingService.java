@@ -1,14 +1,13 @@
 package searchengine.services.interfaces;
 
 import org.springframework.http.ResponseEntity;
-
-import java.util.Map;
+import searchengine.dto.ApiResponse;
 
 public interface IndexingService {
 
-    ResponseEntity<Map<String, Object>> startIndexing();
+    ResponseEntity<ApiResponse> startIndexing();
 
-    ResponseEntity<Map<String, Object>> stopIndexing();
+    ResponseEntity<ApiResponse> stopIndexing();
 
-    ResponseEntity<Map<String, Object>> indexPage(String pagePath);
+    ResponseEntity<ApiResponse> indexPage(String pagePath);
 }

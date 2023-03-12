@@ -3,12 +3,12 @@ package searchengine.controllers;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import searchengine.dto.ApiResponse;
+import searchengine.dto.search.SearchResultResponse;
 import searchengine.dto.statistics.StatisticsResponse;
 import searchengine.services.interfaces.IndexingService;
 import searchengine.services.interfaces.SearchService;
 import searchengine.services.interfaces.StatisticsService;
-
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api")
@@ -25,22 +25,22 @@ public class ApiController {
     }
 
     @GetMapping("/startIndexing")
-    public ResponseEntity<Map<String, Object>> startIndexing() {
+    public ResponseEntity<ApiResponse> startIndexing() {
         return indexingService.startIndexing();
     }
 
     @GetMapping("/stopIndexing")
-    public ResponseEntity<Map<String, Object>> stopIndexing() {
+    public ResponseEntity<ApiResponse> stopIndexing() {
         return indexingService.stopIndexing();
     }
 
     @PostMapping("/indexPage")
-    public ResponseEntity<Map<String, Object>> indexPage(@RequestParam(name="url", required = false) String path) {
+    public ResponseEntity<ApiResponse> indexPage(@RequestParam(name="url", required = false) String path) {
         return indexingService.indexPage(path);
     }
 
     @GetMapping("/search")
-    public ResponseEntity<Object> search(
+    public ResponseEntity<SearchResultResponse> search(
             @RequestParam(name="query", required = false) String query,
             @RequestParam(name="site", required = false) String site,
             @RequestParam(name="offset", required = false) Integer offset,

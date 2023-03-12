@@ -52,16 +52,20 @@ public class PageCrawlerUnit extends RecursiveAction {
         String referrer = service.getProperties().getReferrer();
         Connection connection = JsoupUtil.getConnection(pagePath, userAgent, referrer);
         int httpStatusCode = connection.execute().statusCode();
+        if (httpStatusCode != 200) {
+            connection = JsoupUtil.getConnection(StringUtil.cutSlash(pagePath), userAgent, referrer);
+            httpStatusCode = connection.execute().statusCode();
+        }
         String pathToSave = StringUtil.cutProtocolAndHost(pagePath, siteEntity.getUrl());
         PageEntity pageEntity = service.createPageEntity(pathToSave, httpStatusCode, siteEntity);
 
         String html = "";
         if (httpStatusCode != 200) {
-            service.savePageContentAndSiteStatus(pageEntity, html, siteEntity);
+            service.savePageContentAndSiteStatusTime(pageEntity, html, siteEntity);
         } else {
             Document document = connection.get();
             html = document.outerHtml();
-            service.savePageContentAndSiteStatus(pageEntity, html, siteEntity);
+            service.savePageContentAndSiteStatusTime(pageEntity, html, siteEntity);
             service.handleLemmasAndIndex(html, pageEntity, siteEntity);
             Elements anchors = document.select("body").select("a");
             handleAnchors(anchors, forkJoinPoolPagesList);

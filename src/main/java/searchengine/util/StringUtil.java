@@ -77,25 +77,28 @@ public class StringUtil {
     }
 
     public String getPathToSave(String pageUrl, String startPage) {
-        String pathToSave = StringUtil.cutProtocolAndHost(pageUrl, startPage);
-        return pathToSave.contains(".") ? pathToSave : pathToSave + SLASH;
+        int start = startPage.length();
+        String pathToSave = pageUrl.replace("www.", "");
+        pathToSave = SLASH + pathToSave.substring(start);
+        pathToSave = pathToSave.endsWith(SLASH) || pathToSave.contains(".") ? pathToSave : pathToSave + SLASH;
+        return pathToSave;
     }
 
     public boolean isHrefValid(String homePage, String href, String fileExtensions) {
         return href.startsWith(homePage)
                 && isHrefToPage(href, fileExtensions)
                 && !href.equals(homePage)
-                && !href.equals(homePage + "/");
+                && !href.equals(homePage + SLASH);
     }
 
     public boolean isPageAdded(Set<String> webpages, String href) {
-        href += href.endsWith("/") ? "" : "/";
+        href += href.endsWith(SLASH) ? "" : SLASH;
         return webpages.contains(href);
     }
 
     public String getHrefFromAnchor(Element anchor) {
         String href = anchor.absUrl("href");
-        href = href.endsWith("/") ? href : href + "/";
+        href = href.endsWith(SLASH) ? href : href + SLASH;
         return href.replace("//www.", "//");
     }
 

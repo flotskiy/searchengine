@@ -18,6 +18,8 @@ import java.security.cert.CertPathValidatorException;
 import java.security.cert.CertificateExpiredException;
 import java.util.Collection;
 import java.util.Date;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CancellationException;
 
 @Service
@@ -66,16 +68,39 @@ public class RepoAccessServiceImpl implements RepoAccessService {
     @Override
     public PageEntity deleteOldPageEntity(String path, SiteEntity siteEntity) {
         PageEntity pageEntityToDelete = pageRepository.findPageEntityByPathAndSiteEntity(path, siteEntity);
+        if (pageEntityToDelete == null) {
+            return null;
+        }
         pageRepository.delete(pageEntityToDelete);
         return pageEntityToDelete;
     }
 
     @Override
-    public void savePageContentAndSiteStatus(PageEntity pageEntity, String pageHtml, SiteEntity siteEntity) {
+    public List<SiteEntity> getAllSites() {
+        return siteRepository.findAll();
+    }
+
+    @Override
+    public boolean existsByStatus(Status status) {
+        return siteRepository.existsByStatus(status);
+    }
+
+    @Override
+    public void savePageContentAndSiteStatusTime(PageEntity pageEntity, String pageHtml, SiteEntity siteEntity) {
         pageEntity.setContent(pageHtml);
         pageRepository.save(pageEntity);
         siteEntity.setStatusTime(new Date());
         siteRepository.save(siteEntity);
+    }
+
+    @Override
+    public float getAbsRelevance(int pageId, Collection<Integer> lemmaIds) {
+        return indexRepository.getAbsRelevance(pageId, lemmaIds);
+    }
+
+    @Override
+    public Set<Integer> findPagesIdsByLemmaIdIn(Collection<Integer> lemmaIds) {
+        return indexRepository.findPagesIdsByLemmaIdIn(lemmaIds);
     }
 
     @Override
@@ -105,13 +130,18 @@ public class RepoAccessServiceImpl implements RepoAccessService {
     }
 
     @Override
-    public LemmaEntity findLemmaEntityByLemmaAndSiteId(String lemma, SiteEntity siteEntity) {
-        return lemmaRepository.findTopByLemmaAndSiteId(lemma, siteEntity);
+    public List<PageEntity> getAllPagesByIdIn(Collection<Integer> pageIdSet) {
+        return pageRepository.findAllById(pageIdSet);
     }
 
     @Override
-    public void saveLemma(LemmaEntity lemmaEntity) {
-        lemmaRepository.save(lemmaEntity);
+    public int countPageEntitiesBySiteEntity(SiteEntity siteEntity) {
+        return pageRepository.countPageEntitiesBySiteEntity(siteEntity);
+    }
+
+    @Override
+    public float get95perCentPagesLimit(int siteId) {
+        return pageRepository.get95perCentPagesLimit(siteId);
     }
 
     @Override
@@ -125,19 +155,32 @@ public class RepoAccessServiceImpl implements RepoAccessService {
     }
 
     @Override
-    public void correctSingleLemmaFrequency(LemmaEntity lemmaEntity) {
-        int frequency = lemmaEntity.getFrequency();
-        if (frequency == 1) {
-            lemmaRepository.delete(lemmaEntity);
-        } else {
-            frequency -= 1;
-            lemmaEntity.setFrequency(frequency);
-            lemmaRepository.save(lemmaEntity);
-        }
+    public int countLemmaEntitiesBySiteId(SiteEntity siteEntity) {
+        return lemmaRepository.countLemmaEntitiesBySiteId(siteEntity);
+    }
+
+    @Override
+    public List<LemmaEntity> findLemmaEntitiesByLemmaIn(Collection<String> list) {
+        return lemmaRepository.findLemmaEntitiesByLemmaIn(list);
+    }
+
+    @Override
+    public List<LemmaEntity> findLemmaEntitiesByLemmaInAndSiteId(Collection<String> list, SiteEntity siteEntity) {
+        return lemmaRepository.findLemmaEntitiesByLemmaInAndSiteId(list, siteEntity);
+    }
+
+    @Override
+    public void reduceByOneLemmaFrequencies(Collection<String> lemmas, int siteId) {
+        lemmaRepository.reduceByOneLemmaFrequencies(siteId, lemmas);
+    }
+
+    @Override
+    public void deleteLemmasWithLowFrequencies(int siteId) {
+        lemmaRepository.deleteLemmasWithLowFrequencies(siteId);
     }
 
     private String getErrorMessage(Exception e) {
-        log.warn("Creating error message for: '{}'", e.toString());
+        log.info("Creating error message for: '{}'", e.toString());
         if (e instanceof CancellationException || e instanceof InterruptedException) {
             return properties.getInterruptedByUserMessage();
         } else if (e instanceof CertificateExpiredException || e instanceof SSLHandshakeException

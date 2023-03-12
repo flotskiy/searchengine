@@ -1,5 +1,6 @@
 package searchengine.model;
 
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -8,6 +9,7 @@ import java.util.List;
 
 @Getter
 @Setter
+@EqualsAndHashCode
 @Entity
 @Table(name = "Pages",
         indexes = @Index(name = "path_index", columnList = "path"),

@@ -9,12 +9,14 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
 public class LemmatizerServiceImpl implements LemmatizerService {
 
     private static final String SERVICE_PARTS_OF_SPEECH = ".*(ПРЕДЛ|СОЮЗ|ЧАСТ|МЕЖД)$";
+    private static final Pattern PATTERN = Pattern.compile("ё", Pattern.CANON_EQ);
 
     private final LuceneMorphology ruLuceneMorphology;
 
@@ -23,6 +25,7 @@ public class LemmatizerServiceImpl implements LemmatizerService {
         Map<String, Integer> lemmasCountMap = new HashMap<>();
         for (String word : getWordsWithoutServicePartsOfSpeech(text)) {
             for (String wordNormalForm : ruLuceneMorphology.getNormalForms(word)) {
+                wordNormalForm = PATTERN.matcher(wordNormalForm).replaceAll("е");
                 lemmasCountMap.put(wordNormalForm, lemmasCountMap.getOrDefault(wordNormalForm, 0) + 1);
             }
         }
