@@ -1,15 +1,13 @@
 package searchengine.model;
 
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 
 import javax.persistence.*;
 import java.util.List;
 
-@Getter
-@Setter
-@EqualsAndHashCode
+@Data
+@NoArgsConstructor
+@RequiredArgsConstructor
 @Entity
 @Table(name = "Pages",
         indexes = @Index(name = "path_index", columnList = "path"),
@@ -21,15 +19,19 @@ public class PageEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
 
+    @NonNull
     @Column(nullable = false)
     private String path;
 
+    @NonNull
     @Column(nullable = false)
     private int code;
 
+    @NonNull
     @Column(columnDefinition = "MEDIUMTEXT", nullable = false)
     private String content;
 
+    @NonNull
     @ManyToOne
     @JoinColumn(name = "site_id", referencedColumnName = "id", nullable = false)
     private SiteEntity siteEntity;

@@ -9,7 +9,9 @@ import searchengine.dto.statistics.StatisticsResponse;
 import searchengine.dto.statistics.TotalStatistics;
 import searchengine.model.SiteEntity;
 import searchengine.model.Status;
-import searchengine.services.interfaces.RepoAccessService;
+import searchengine.repository.LemmaRepository;
+import searchengine.repository.PageRepository;
+import searchengine.repository.SiteRepository;
 import searchengine.services.interfaces.StatisticsService;
 
 import java.util.ArrayList;
@@ -20,7 +22,9 @@ import java.util.List;
 public class StatisticsServiceImpl implements StatisticsService {
 
     private final SitesList sites;
-    private final RepoAccessService repoAccessService;
+    private final SiteRepository siteRepository;
+    private final PageRepository pageRepository;
+    private final LemmaRepository lemmaRepository;
 
     @Override
     public StatisticsResponse getStatistics() {
@@ -29,7 +33,7 @@ public class StatisticsServiceImpl implements StatisticsService {
         total.setIndexing(isIndexing());
 
         List<DetailedStatisticsItem> detailed = new ArrayList<>();
-        List<SiteEntity> siteEntityList = repoAccessService.getAllSites();
+        List<SiteEntity> siteEntityList = siteRepository.findAll();
         for(SiteEntity siteEntity : siteEntityList) {
             DetailedStatisticsItem item = new DetailedStatisticsItem();
             item.setName(siteEntity.getName());
@@ -57,14 +61,14 @@ public class StatisticsServiceImpl implements StatisticsService {
     }
 
     private boolean isIndexing() {
-        return repoAccessService.existsByStatus(Status.INDEXING);
+        return siteRepository.existsByStatus(Status.INDEXING);
     }
 
     private int countPagesBySiteEntity(SiteEntity site) {
-        return repoAccessService.countPageEntitiesBySiteEntity(site);
+        return pageRepository.countPageEntitiesBySiteEntity(site);
     }
 
     private int countLemmasBySiteEntity(SiteEntity site) {
-        return repoAccessService.countLemmaEntitiesBySiteId(site);
+        return lemmaRepository.countLemmaEntitiesBySiteId(site);
     }
 }

@@ -56,10 +56,10 @@ public class PageCrawlerUnit extends RecursiveAction {
             connection = JsoupUtil.getConnection(StringUtil.cutSlash(pagePath), userAgent, referrer);
             httpStatusCode = connection.execute().statusCode();
         }
-        String pathToSave = StringUtil.cutProtocolAndHost(pagePath, siteEntity.getUrl());
-        PageEntity pageEntity = service.createPageEntity(pathToSave, httpStatusCode, siteEntity);
 
+        String pathToSave = StringUtil.cutProtocolAndHost(pagePath, siteEntity.getUrl());
         String html = "";
+        PageEntity pageEntity = new PageEntity(pathToSave, httpStatusCode, html, siteEntity);
         if (httpStatusCode != 200) {
             service.savePageContentAndSiteStatusTime(pageEntity, html, siteEntity);
         } else {

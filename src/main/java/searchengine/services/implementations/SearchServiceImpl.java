@@ -14,8 +14,11 @@ import searchengine.model.LemmaEntity;
 import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
 import searchengine.model.Status;
+import searchengine.repository.IndexRepository;
+import searchengine.repository.LemmaRepository;
+import searchengine.repository.PageRepository;
+import searchengine.repository.SiteRepository;
 import searchengine.services.interfaces.LemmatizerService;
-import searchengine.services.interfaces.RepoAccessService;
 import searchengine.services.interfaces.SearchService;
 import searchengine.util.PropertiesHolder;
 import searchengine.util.StringUtil;
@@ -29,7 +32,10 @@ import java.util.stream.Collectors;
 public class SearchServiceImpl implements SearchService {
 
     private final LemmatizerService lemmatizerService;
-    private final RepoAccessService repoAccessService;
+    private final SiteRepository siteRepository;
+    private final PageRepository pageRepository;
+    private final LemmaRepository lemmaRepository;
+    private final IndexRepository indexRepository;
     private final PropertiesHolder properties;
 
     @Override
@@ -52,11 +58,11 @@ public class SearchServiceImpl implements SearchService {
 
     private boolean isIndexingOrFailed(String siteName) {
         siteName = siteName + "/";
-        SiteEntity siteEntity = repoAccessService.findSiteEntityByUrl(siteName);
+        SiteEntity siteEntity = siteRepository.findSiteEntityByUrl(siteName);
         if (siteEntity != null) {
             return !siteEntity.getStatus().equals(Status.INDEXED);
         }
-        return repoAccessService.existsByStatus(Status.INDEXING) || repoAccessService.existsByStatus(Status.FAILED);
+        return siteRepository.existsByStatus(Status.INDEXING) || siteRepository.existsByStatus(Status.FAILED);
     }
 
     private SearchResultResponse getSearchResultPageList(String query, String site, int offset, int limit) {
@@ -81,7 +87,7 @@ public class SearchServiceImpl implements SearchService {
     }
 
     private SearchResultResponse getSearchResultPageList(String query, String siteUrl) {
-        List<SiteEntity> siteEntityList = repoAccessService.getAllSites();
+        List<SiteEntity> siteEntityList = siteRepository.findAll();
         SiteEntity searchingSite = getSearchingSiteEntity(siteEntityList, siteUrl);
         List<LemmaEntity> sortedLemmasFromQuery = getSortedByFrequencyAscLemmasQueryList(query, searchingSite);
         List<LemmaEntity> frequentLemmas = getFrequentLemmas(siteEntityList, sortedLemmasFromQuery);
@@ -92,7 +98,7 @@ public class SearchServiceImpl implements SearchService {
         }
 
         Set<Integer> pagesIdSet = getAllPagesId(sortedLemmasFromQuery);
-        List<PageEntity> pages = getPageEntitiesByPageIds(pagesIdSet);
+        List<PageEntity> pages = pageRepository.findAllById(pagesIdSet);
         if (searchingSite == null) {
             pages = filterPages(pages, sortedLemmasFromQuery, frequentLemmas);
         }
@@ -179,7 +185,7 @@ public class SearchServiceImpl implements SearchService {
         String title = document.title();
 
         String snippet = getSnippet(document, lemmasString);
-        Float relevanceWrapped = repoAccessService.getAbsRelevance(pageEntity.getId(), lemmasIdList);
+        Float relevanceWrapped = indexRepository.getAbsRelevance(pageEntity.getId(), lemmasIdList);
         float relevance = relevanceWrapped == null ? 0 : relevanceWrapped;
 
         SearchResultPage searchResultPage = new SearchResultPage();
@@ -209,7 +215,7 @@ public class SearchServiceImpl implements SearchService {
     private Set<Integer> findPagesId(List<String> lemmasSorted, Map<String, Set<Integer>> gropedLemmaIdMap) {
         String firstLemma = lemmasSorted.get(0);
         Set<Integer> firstLemmaIdsSet = gropedLemmaIdMap.get(firstLemma);
-        Set<Integer> pagesIdResultSet = getPagesIdByLemmaIdIn(firstLemmaIdsSet);
+        Set<Integer> pagesIdResultSet = indexRepository.findPagesIdsByLemmaIdIn(firstLemmaIdsSet);
 
         String currentLemma;
         Set<Integer> currentLemmasIdSet;
@@ -218,7 +224,7 @@ public class SearchServiceImpl implements SearchService {
             pagesIdTempSet.clear();
             currentLemma = lemmasSorted.get(i);
             currentLemmasIdSet = gropedLemmaIdMap.get(currentLemma);
-            pagesIdTempSet = getPagesIdByLemmaIdIn(currentLemmasIdSet);
+            pagesIdTempSet = indexRepository.findPagesIdsByLemmaIdIn(currentLemmasIdSet);
             pagesIdResultSet.retainAll(pagesIdTempSet);
             if (pagesIdResultSet.isEmpty()) {
                 return Collections.emptySet();
@@ -227,21 +233,13 @@ public class SearchServiceImpl implements SearchService {
         return pagesIdResultSet;
     }
 
-    private Set<Integer> getPagesIdByLemmaIdIn(Collection<Integer> lemmaIds) {
-        return repoAccessService.findPagesIdsByLemmaIdIn(lemmaIds);
-    }
-
-    private List<PageEntity> getPageEntitiesByPageIds(Set<Integer> pageIdSet) {
-        return repoAccessService.getAllPagesByIdIn(pageIdSet);
-    }
-
     private List<LemmaEntity> getSortedByFrequencyAscLemmasQueryList(String query, SiteEntity siteEntity) {
         Set<String> queryWordsSet = lemmatizerService.getLemmasCountMap(query).keySet();
         List<LemmaEntity> lemmaEntityList;
         if (siteEntity == null) {
-            lemmaEntityList = repoAccessService.findLemmaEntitiesByLemmaIn(queryWordsSet);
+            lemmaEntityList = lemmaRepository.findLemmaEntitiesByLemmaIn(queryWordsSet);
         } else {
-            lemmaEntityList = repoAccessService.findLemmaEntitiesByLemmaInAndSiteId(queryWordsSet, siteEntity);
+            lemmaEntityList = lemmaRepository.findLemmaEntitiesByLemmaInAndSiteId(queryWordsSet, siteEntity);
         }
         lemmaEntityList.sort((l1, l2) -> l1.getFrequency() < l2.getFrequency() ? -1 : 1);
         return lemmaEntityList;
@@ -295,7 +293,7 @@ public class SearchServiceImpl implements SearchService {
         Map<Integer, Float> frequencyMap = new HashMap<>();
         for (SiteEntity site : siteList) {
             int id = site.getId();
-            float occurrenceOf95perCentLimit = repoAccessService.get95perCentPagesLimit(id);
+            float occurrenceOf95perCentLimit = pageRepository.get95perCentPagesLimit(id);
             frequencyMap.put(id, occurrenceOf95perCentLimit);
         }
         return frequencyMap;
