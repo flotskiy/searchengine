@@ -7,7 +7,6 @@ import org.jsoup.nodes.Document;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
-import searchengine.dto.search.LemmaDto;
 import searchengine.dto.search.SearchResultPage;
 import searchengine.dto.search.SearchResultResponse;
 import searchengine.model.LemmaEntity;
@@ -87,12 +86,13 @@ public class SearchServiceImpl implements SearchService {
     }
 
     private SearchResultResponse getSearchResultPageList(String query, String siteUrl) {
+        SearchResultResponse searchResultResponse = new SearchResultResponse();
+        searchResultResponse.setResult(true);
+
         List<SiteEntity> siteEntityList = siteRepository.findAll();
         SiteEntity searchingSite = getSearchingSiteEntity(siteEntityList, siteUrl);
         List<LemmaEntity> sortedLemmasFromQuery = getSortedByFrequencyAscLemmasQueryList(query, searchingSite);
         List<LemmaEntity> frequentLemmas = getFrequentLemmas(siteEntityList, sortedLemmasFromQuery);
-
-        SearchResultResponse searchResultResponse = createSearchResultResponse(frequentLemmas);
         if (sortedLemmasFromQuery.isEmpty() || sortedLemmasFromQuery.size() == frequentLemmas.size()) {
             return returnEmptySearchResult(searchResultResponse);
         }
@@ -108,14 +108,6 @@ public class SearchServiceImpl implements SearchService {
 
         List<SearchResultPage> pagesFoundList = getSortedSearchResultPageList(pages, sortedLemmasFromQuery);
         return putPagesIntoSearchResultResponse(searchResultResponse, pagesFoundList);
-    }
-
-    private SearchResultResponse createSearchResultResponse(List<LemmaEntity> frequentLemmas) {
-        SearchResultResponse searchResultResponse = new SearchResultResponse();
-        searchResultResponse.setResult(true);
-        List<LemmaDto> frequentLemmaDtoList = convertLemmaEntityListToLemmaDtoList(frequentLemmas);
-        searchResultResponse.setFrequentLemmas(frequentLemmaDtoList);
-        return searchResultResponse;
     }
 
     private SearchResultResponse putPagesIntoSearchResultResponse(
@@ -297,16 +289,5 @@ public class SearchServiceImpl implements SearchService {
             frequencyMap.put(id, occurrenceOf95perCentLimit);
         }
         return frequencyMap;
-    }
-
-    private List<LemmaDto> convertLemmaEntityListToLemmaDtoList(List<LemmaEntity> lemmaEntityList) {
-        List<LemmaDto> result = new ArrayList<>();
-        for (LemmaEntity lemmaEntity : lemmaEntityList) {
-            LemmaDto lemmaDto = new LemmaDto();
-            lemmaDto.setLemma(lemmaEntity.getLemma());
-            lemmaDto.setSite(lemmaEntity.getSiteId().getName());
-            result.add(lemmaDto);
-        }
-        return result;
     }
 }

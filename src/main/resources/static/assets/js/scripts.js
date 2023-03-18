@@ -1563,13 +1563,6 @@ var API = function(){
                     } else {
                         $('.SearchResult-footer').addClass('SearchResult-footer_hide')
                     }
-                    // $content.append('<br/><br/><br/><div><b>' +
-                    //     'Following words occur too often and some pages excluded from search results for relevant sites:' +
-                    //     '</b></div>');
-                    // result.frequentLemmas.forEach(function(lemma){
-                    //     $content.append('<div class="SearchResult-block">' +
-                    //         '\'' + lemma.lemma + '\' for site \'' + lemma.site + '\'</div>')
-                    // });
                 } else {
                     if ($this.next('.API-error').length) {
                         $this.next('.API-error').text(result.error);
