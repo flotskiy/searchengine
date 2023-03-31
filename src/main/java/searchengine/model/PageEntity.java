@@ -20,7 +20,7 @@ public class PageEntity {
     private int id;
 
     @NonNull
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "varchar(765)")
     private String path;
 
     @NonNull

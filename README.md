@@ -1,46 +1,54 @@
-Поисковый движок для сайта
+## Site Search Engine
 
-Реализован механизм, позволяющий обеспечить анализ указанного сайта с целью последующей организации поиска по страницам данного сайта
+The application to analyze the specified site (or several sites) to enable site searching
 
+## Technologies
 
-Технологии
+- **Java 17**
+- **Spring Boot 2.7.1**
+- **Maven**
+- **MySQL**
+- **Fork-Join Java Framework**
+- **Apache Lucene Morphology**
+- **JSOUP**
+- **Lombok**
 
-Java 17,
-Spring Boot 2.7.1,
-Maven,
-MySQL,
-Fork-Join Java Framework,
-Russian Morphology for Apache Lucene,
-JSOUP,
-Lombok
+## How a search engine works
 
+- the configuration file specifies the addresses of the sites to be searched for
+- the search engine crawls all the pages of the specified sites and indexes them so that then it finds the most relevant pages for any search query
+- the user sends search queries via the engine API
+- the search query is transformed in a certain way into a list of words translated into the basic form, according to which pages are searched in the previously formed index
+- the user gets ranked and sorted search results
 
-Принципы работы поискового движка
+## Application Interaction
 
-- в конфигурационном файле перед запуском задаются адреса сайтов, по которым должен осуществляться поиск;
-- поисковый движок обходит все страницы заданных сайтов и индексирует их так, чтобы потом находить наиболее релевантные страницы по любому поисковому запросу;
-- пользователь присылает поисковые запросы через API движка;
-- запрос определённым образом трансформируется в список слов, переведённых в базовую форму, по которым в ранее сформированном индексе ищутся страницы;
-- результаты поиска ранжируются, сортируются и отдаются пользователю
+<p align="center">
+<img src="./src/main/resources/static/assets/gif/example.gif" alt="gif example" width="80%">
+</p>
 
+The web interface of the application is implemented on one web page with three tabs:
+- **dashboard** – shows statistics on sites
+<p align="center">
+<img src="https://i.postimg.cc/Zqxm44LW/dashboard.png" alt="dashboard tab image" width="80%">
+</p>
 
-Взаимодействие с приложением
+- **management** – contains indexing tools
+<p align="center">
+<img src="https://i.postimg.cc/dVdvN8km/management.png" alt="management tab image" width="80%">
+</p>
 
-Веб-интерфейс приложения реализован на одной веб-странице с тремя вкладками:
-- dashboard – содержит статистику по сайтам
-img/gif
+- **search** – contains a search field and a drop-down list for selecting a site
+<p align="center">
+<img src="https://i.postimg.cc/W4vVBh0R/search.png" alt="search tab image" width="80%">
+</p>
 
--	management – содержит инструменты управления
-img/gif
+## Launching the application
 
--	search – содержит поле поиска и выпадающий список для выбора сайта
-img/gif
-
-
-Запуск приложения
-
-Для функционирования поискового движка необхдимы Java 17+ и MySQL сервер, а также предварительные настройки:
-- создание пустой базы данных search_engine. Необходимо использовать кодировку utf8mb4;
-- указание в файле конфигураци application.yaml параметров подключения к базе данных в разделе spring.datasource: username, password, url;
-- указание в файле конфигураци application.yaml сайтов для индексации и дальнейшего поиска по ним.
-Для доступа к веб-интерфейсу необходимо запустить приложение и перейти в браузере по адресу http://localhost:8080/
+- install **Java 17+ and MySQL server**
+- create an empty search_engine database. It is necessary to use utf8mb4 encoding
+- download jar-file and configuration file
+- indicate in the configuration file application.yaml database connection parameters in the spring.datasource section: username, password
+- indicate in the configuration file application.yaml sites for indexing
+- start application by running jar from command line: java -jar SearchEngine-1.0-SNAPSHOT.jar
+- go to http://localhost:8080/ in the browser

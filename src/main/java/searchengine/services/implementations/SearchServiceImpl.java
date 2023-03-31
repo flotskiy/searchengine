@@ -158,6 +158,9 @@ public class SearchServiceImpl implements SearchService {
 
         for (PageEntity pageEntity : pages) {
             SearchResultPage searchResultPage = createSearchResultPage(pageEntity, lemmasIdList, lemmasStringSet);
+            if (searchResultPage.getSnippet().isEmpty()) {
+                continue;
+            }
             searchResultPageList.add(searchResultPage);
         }
         searchResultPageList.sort(Comparator.comparing(SearchResultPage::getRelevance).reversed()

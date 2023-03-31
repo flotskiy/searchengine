@@ -8,6 +8,7 @@ import org.jsoup.UnsupportedMimeTypeException;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import searchengine.exceptions.SiteException;
 import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
 import searchengine.model.Status;
@@ -36,7 +37,7 @@ public class PageCrawlerUnit extends RecursiveAction {
         try {
             Thread.sleep(500);
             handlePageData();
-        } catch (UnsupportedMimeTypeException | ConnectException ignoredException) {
+        } catch (UnsupportedMimeTypeException | ConnectException | SiteException ignoredException) {
             log.warn("Exception '{}' ignored in PageCrawlerUnit while handling path: {}", ignoredException, pagePath);
         } catch (Exception exception) {
             log.warn("Exception '{}' in PageCrawlerUnit while handling path: {}. " +

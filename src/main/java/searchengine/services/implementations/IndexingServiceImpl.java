@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import searchengine.config.Site;
 import searchengine.config.SitesList;
 import searchengine.dto.ApiResponse;
+import searchengine.exceptions.SiteException;
 import searchengine.model.*;
 import searchengine.repository.IndexRepository;
 import searchengine.repository.LemmaRepository;
@@ -52,8 +53,8 @@ public class IndexingServiceImpl implements IndexingService {
     private ForkJoinPool forkJoinPool = new ForkJoinPool();
     @Getter
     private Set<String> webpagesPathSet;
-    private Map<Integer, Map<String, LemmaEntity>> lemmasMap;
-    private Map<Integer, Set<IndexEntity>> indexEntityMap;
+    private ConcurrentMap<Integer, Map<String, LemmaEntity>> lemmasMap;
+    private ConcurrentMap<Integer, Set<IndexEntity>> indexEntityMap;
     @Getter
     private ConcurrentMap<String, Status> statusMap;
 
@@ -86,12 +87,17 @@ public class IndexingServiceImpl implements IndexingService {
     @Override
     public ResponseEntity<ApiResponse> indexPage(String path) {
         ApiResponse apiResponse = new ApiResponse();
-        if (isPageBelongsToSiteSpecified(path)) {
-            new Thread(() -> indexSinglePage(path)).start();
-            apiResponse.setResult(true);
-        } else {
+        try {
+            if (isPageBelongsToSiteSpecified(path)) {
+                new Thread(() -> indexSinglePage(path)).start();
+                apiResponse.setResult(true);
+            } else {
+                apiResponse.setResult(false);
+                apiResponse.setError("Page is located outside the sites specified in the configuration file");
+            }
+        } catch (SiteException siteException) {
             apiResponse.setResult(false);
-            apiResponse.setError("Page is located outside the sites specified in the configuration file");
+            apiResponse.setError("Path incorrect");
         }
         return ResponseEntity.ok(apiResponse);
     }
@@ -131,10 +137,7 @@ public class IndexingServiceImpl implements IndexingService {
             }
 
             float lemmaRank = calculateLemmaRank(lemma, mapList.get(0), mapList.get(1));
-            IndexEntity indexEntity = new IndexEntity();
-            indexEntity.setPageId(page);
-            indexEntity.setLemmaId(lemmaEntity);
-            indexEntity.setLemmaRank(lemmaRank);
+            IndexEntity indexEntity = new IndexEntity(page, lemmaEntity, lemmaRank);
             indexEntityMap.get(site.getId()).add(indexEntity);
         }
     }
@@ -182,7 +185,7 @@ public class IndexingServiceImpl implements IndexingService {
     }
 
     private SiteEntity createSiteToHandleSinglePage(String siteHomePageToSave) {
-        SiteEntity siteEntity = null;
+        SiteEntity siteEntity = new SiteEntity();
         String currentSiteHomePage;
         for (Site site : sites.getSites()) {
             currentSiteHomePage = StringUtil.getStartPage(site.getUrl());
@@ -197,8 +200,8 @@ public class IndexingServiceImpl implements IndexingService {
     private void indexAll() {
         isIndexing = true;
         forkJoinPool = new ForkJoinPool();
-        lemmasMap = new HashMap<>();
-        indexEntityMap = new HashMap<>();
+        lemmasMap = new ConcurrentHashMap<>();
+        indexEntityMap = new ConcurrentHashMap<>();
         webpagesPathSet = Collections.synchronizedSet(new HashSet<>());
         statusMap = new ConcurrentHashMap<>();
         for (Site site : sites.getSites()) {

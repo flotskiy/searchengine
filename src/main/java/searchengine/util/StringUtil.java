@@ -38,6 +38,9 @@ public class StringUtil {
             path = path.substring(0, path.length() - 1);
         }
         path = path.startsWith(SLASH) ? path : SLASH + path;
+        if (path.length() > 765) {
+            throw new SiteException("Path too looooooong (length is " + path.length() + ")");
+        }
         return path;
     }
 

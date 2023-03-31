@@ -31,7 +31,6 @@ public class StatisticsServiceImpl implements StatisticsService {
         TotalStatistics total = new TotalStatistics();
         total.setSites(sites.getSites().size());
         total.setIndexing(isIndexing());
-
         List<DetailedStatisticsItem> detailed = new ArrayList<>();
         List<SiteEntity> siteEntityList = siteRepository.findAll();
         for(SiteEntity siteEntity : siteEntityList) {
@@ -50,7 +49,6 @@ public class StatisticsServiceImpl implements StatisticsService {
             total.setLemmas(total.getLemmas() + lemmas);
             detailed.add(item);
         }
-
         StatisticsResponse response = new StatisticsResponse();
         StatisticsData data = new StatisticsData();
         data.setTotal(total);
