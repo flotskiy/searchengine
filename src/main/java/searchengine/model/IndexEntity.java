@@ -21,13 +21,13 @@ public class IndexEntity {
     @ManyToOne
     @JoinColumn(name = "page_id", referencedColumnName = "id", nullable = false)
     @OnDelete(action = OnDeleteAction.CASCADE)
-    private PageEntity pageId;
+    private PageEntity page;
 
     @NonNull
     @ManyToOne
     @JoinColumn(name = "lemma_id", referencedColumnName = "id", nullable = false)
     @OnDelete(action = OnDeleteAction.CASCADE)
-    private LemmaEntity lemmaId;
+    private LemmaEntity lemma;
 
     @NonNull
     @Column(name = "lemma_rank", nullable = false)

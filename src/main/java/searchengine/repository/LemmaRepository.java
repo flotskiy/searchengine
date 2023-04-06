@@ -13,11 +13,11 @@ import java.util.List;
 
 public interface LemmaRepository extends JpaRepository<LemmaEntity, Long> {
 
-    int countLemmaEntitiesBySiteId(SiteEntity siteEntity);
+    int countLemmaEntitiesBySite(SiteEntity siteEntity);
 
     List<LemmaEntity> findLemmaEntitiesByLemmaIn(Collection<String> list);
 
-    List<LemmaEntity> findLemmaEntitiesByLemmaInAndSiteId(Collection<String> list, SiteEntity siteEntity);
+    List<LemmaEntity> findLemmaEntitiesByLemmaInAndSite(Collection<String> list, SiteEntity siteEntity);
 
     @Modifying
     @Transactional

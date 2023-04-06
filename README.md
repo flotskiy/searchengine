@@ -47,8 +47,8 @@ The web interface of the application is implemented on one web page with three t
 
 - install **Java 17+ and MySQL server**
 - create an empty search_engine database. It is necessary to use utf8mb4 encoding
-- download jar-file and configuration file
+- download jar-file and configuration file from Releases
 - indicate in the configuration file application.yaml database connection parameters in the spring.datasource section: username, password
 - indicate in the configuration file application.yaml sites for indexing
-- start application by running jar from command line: java -jar SearchEngine-1.0-SNAPSHOT.jar
+- start application by running jar from command line: java -jar SearchEngine-1.0.jar
 - go to http://localhost:8080/ in the browser

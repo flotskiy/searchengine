@@ -34,8 +34,8 @@ public class PageEntity {
     @NonNull
     @ManyToOne
     @JoinColumn(name = "site_id", referencedColumnName = "id", nullable = false)
-    private SiteEntity siteEntity;
+    private SiteEntity site;
 
-    @OneToMany(mappedBy = "pageId", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "page", cascade = CascadeType.ALL)
     private List<IndexEntity> indexEntities;
 }

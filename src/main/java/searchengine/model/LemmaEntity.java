@@ -30,8 +30,8 @@ public class LemmaEntity {
     @ManyToOne
     @JoinColumn(name = "site_id", referencedColumnName = "id", nullable = false)
     @OnDelete(action = OnDeleteAction.CASCADE)
-    private SiteEntity siteId;
+    private SiteEntity site;
 
-    @OneToMany(mappedBy = "lemmaId", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "lemma", cascade = CascadeType.ALL)
     private List<IndexEntity> indexEntities;
 }

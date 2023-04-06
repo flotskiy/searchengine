@@ -18,10 +18,10 @@ indexing-settings:
   sites:
     - url: https://www.svetlovka.ru/
       name: Светловка
-    - url: http://www.playback.ru/
-      name: Playback
-    - url: https://nikoartgallery.com/
-      name: NikoArtGallery
+    - url: https://www.lutherancathedral.ru/
+      name: lutherancathedral
+    - url: https://et-cetera.ru/
+      name: Театр
 
 connect:
   useragent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.5060.53 Safari/537.36

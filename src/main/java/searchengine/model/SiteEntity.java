@@ -33,9 +33,9 @@ public class SiteEntity {
     @Column(nullable = false)
     private String name;
 
-    @OneToMany(mappedBy = "siteEntity", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "site", cascade = CascadeType.ALL)
     private List<PageEntity> pageEntities;
 
-    @OneToMany(mappedBy = "siteId", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "site", cascade = CascadeType.ALL)
     private List<LemmaEntity> lemmaEntities;
 }

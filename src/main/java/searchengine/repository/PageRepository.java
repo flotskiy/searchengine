@@ -8,9 +8,9 @@ import searchengine.model.SiteEntity;
 
 public interface PageRepository extends JpaRepository<PageEntity, Integer> {
 
-    PageEntity findPageEntityByPathAndSiteEntity(String path, SiteEntity siteEntity);
+    PageEntity findPageEntityByPathAndSite(String path, SiteEntity siteEntity);
 
-    int countPageEntitiesBySiteEntity(SiteEntity siteEntity);
+    int countPageEntitiesBySite(SiteEntity siteEntity);
 
     @Query(value = "SELECT COUNT(*) * 95 / 100 FROM Pages WHERE site_id = :siteId", nativeQuery = true)
     float get95perCentPagesLimit(@Param("siteId") int siteId);

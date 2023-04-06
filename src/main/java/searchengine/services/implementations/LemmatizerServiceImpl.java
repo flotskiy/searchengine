@@ -38,7 +38,7 @@ public class LemmatizerServiceImpl implements LemmatizerService {
                 .stream()
                 .map(s -> s = s.matches("[^(.+)?[а-яёА-ЯЁ]+(.+)?]") ? "в" : s)
                 .map(String::toLowerCase)
-                .map(this::getCirillicWord)
+                .map(this::getCyrillicWord)
                 .map(s -> s = s.length() < 1 ? "в" : s)
                 .map(s -> s = ruLuceneMorphology.getMorphInfo(s).toString().matches(SERVICE_PARTS_OF_SPEECH) ?
                         "" : ruLuceneMorphology.getNormalForms(s).get(0))
@@ -56,7 +56,7 @@ public class LemmatizerServiceImpl implements LemmatizerService {
                 .toList();
     }
 
-    private String getCirillicWord(String word) {
+    private String getCyrillicWord(String word) {
         return word.replaceAll("[^а-яё]", "");
     }
 }

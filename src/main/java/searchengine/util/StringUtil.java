@@ -70,6 +70,7 @@ public class StringUtil {
             }
         }
         if (builder.toString().isEmpty()) {
+            end = textList.size() - 1;
             buildStringBuilder(builder, textList, lemmasPositions, start, end);
         }
         return builder.toString();

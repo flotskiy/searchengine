@@ -63,10 +63,10 @@ public class StatisticsServiceImpl implements StatisticsService {
     }
 
     private int countPagesBySiteEntity(SiteEntity site) {
-        return pageRepository.countPageEntitiesBySiteEntity(site);
+        return pageRepository.countPageEntitiesBySite(site);
     }
 
     private int countLemmasBySiteEntity(SiteEntity site) {
-        return lemmaRepository.countLemmaEntitiesBySiteId(site);
+        return lemmaRepository.countLemmaEntitiesBySite(site);
     }
 }

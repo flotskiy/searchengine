@@ -130,7 +130,7 @@ public class IndexingServiceImpl implements IndexingService {
                 lemmaEntity = new LemmaEntity();
                 lemmaEntity.setLemma(lemma);
                 lemmaEntity.setFrequency(1);
-                lemmaEntity.setSiteId(site);
+                lemmaEntity.setSite(site);
                 lemmasMap.get(site.getId()).put(lemma, lemmaEntity);
             } else {
                 lemmaEntity.setFrequency(lemmaEntity.getFrequency() + 1);
@@ -259,7 +259,7 @@ public class IndexingServiceImpl implements IndexingService {
         List<Map<String, Integer>> lemmasMapList = getUniqueLemmasListOfMaps(html);
         Set<String> allUniquePageLemmas = lemmasMapList.get(2).keySet();
         List<LemmaEntity> singlePageLemmaEntityList =
-                lemmaRepository.findLemmaEntitiesByLemmaInAndSiteId(allUniquePageLemmas, siteEntity);
+                lemmaRepository.findLemmaEntitiesByLemmaInAndSite(allUniquePageLemmas, siteEntity);
         Map<String, LemmaEntity> lemmaEntityMap =
                 singlePageLemmaEntityList.stream().collect(Collectors.toMap(LemmaEntity::getLemma, Function.identity()));
 
@@ -336,7 +336,7 @@ public class IndexingServiceImpl implements IndexingService {
     }
 
     private PageEntity deleteOldPageEntity(String path, SiteEntity siteEntity) {
-        PageEntity pageEntityToDelete = pageRepository.findPageEntityByPathAndSiteEntity(path, siteEntity);
+        PageEntity pageEntityToDelete = pageRepository.findPageEntityByPathAndSite(path, siteEntity);
         if (pageEntityToDelete == null) {
             return null;
         }

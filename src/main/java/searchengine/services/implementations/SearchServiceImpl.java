@@ -123,14 +123,14 @@ public class SearchServiceImpl implements SearchService {
     ) {
         List<PageEntity> filteredPages = pages;
         Map<SiteEntity, List<LemmaEntity>> groupedLemmas =
-                allLemmas.stream().collect(Collectors.groupingBy(LemmaEntity::getSiteId));
+                allLemmas.stream().collect(Collectors.groupingBy(LemmaEntity::getSite));
         Map<SiteEntity, List<LemmaEntity>> groupedFrequentLemmas =
-                frequentLemmas.stream().collect(Collectors.groupingBy(LemmaEntity::getSiteId));
+                frequentLemmas.stream().collect(Collectors.groupingBy(LemmaEntity::getSite));
         for (SiteEntity site : groupedLemmas.keySet()) {
             if ((groupedLemmas.containsKey(site) && groupedFrequentLemmas.containsKey(site))
                     && groupedLemmas.get(site).size() == groupedFrequentLemmas.get(site).size()) {
                 filteredPages = filteredPages.stream()
-                        .filter(pageEntity -> !pageEntity.getSiteEntity().equals(site)).toList();
+                        .filter(pageEntity -> !pageEntity.getSite().equals(site)).toList();
             }
         }
         return filteredPages;
@@ -172,7 +172,7 @@ public class SearchServiceImpl implements SearchService {
     private SearchResultPage createSearchResultPage(
             PageEntity pageEntity, List<Integer> lemmasIdList, Set<String> lemmasString
     ) {
-        SiteEntity tempSite = pageEntity.getSiteEntity();
+        SiteEntity tempSite = pageEntity.getSite();
         String siteUrl = StringUtil.cutSlash(tempSite.getUrl());
         String siteName = tempSite.getName();
         String pagePath = pageEntity.getPath();
@@ -234,7 +234,7 @@ public class SearchServiceImpl implements SearchService {
         if (siteEntity == null) {
             lemmaEntityList = lemmaRepository.findLemmaEntitiesByLemmaIn(queryWordsSet);
         } else {
-            lemmaEntityList = lemmaRepository.findLemmaEntitiesByLemmaInAndSiteId(queryWordsSet, siteEntity);
+            lemmaEntityList = lemmaRepository.findLemmaEntitiesByLemmaInAndSite(queryWordsSet, siteEntity);
         }
         lemmaEntityList.sort((l1, l2) -> l1.getFrequency() < l2.getFrequency() ? -1 : 1);
         return lemmaEntityList;
@@ -276,7 +276,7 @@ public class SearchServiceImpl implements SearchService {
         Map<Integer, Float> frequentWordsBorderMap = get95perCentFrequencyLimitForEachSite(siteEntityList);
         List<LemmaEntity> removedLemmas = new ArrayList<>();
         for (LemmaEntity lemma : new ArrayList<>(lemmaList)) {
-            int siteId = lemma.getSiteId().getId();
+            int siteId = lemma.getSite().getId();
             if (lemma.getFrequency() > frequentWordsBorderMap.get(siteId)) {
                 removedLemmas.add(lemma);
             }
