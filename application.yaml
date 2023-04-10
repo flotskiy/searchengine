@@ -18,8 +18,6 @@ indexing-settings:
   sites:
     - url: https://www.svetlovka.ru/
       name: Светловка
-    - url: https://www.lutherancathedral.ru/
-      name: lutherancathedral
     - url: https://et-cetera.ru/
       name: Театр
 

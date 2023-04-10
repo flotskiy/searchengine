@@ -15,9 +15,9 @@ public interface LemmaRepository extends JpaRepository<LemmaEntity, Long> {
 
     int countLemmaEntitiesBySite(SiteEntity siteEntity);
 
-    List<LemmaEntity> findLemmaEntitiesByLemmaIn(Collection<String> list);
+    List<LemmaEntity> findLemmaEntitiesByLemmaIn(Collection<String> lemmas);
 
-    List<LemmaEntity> findLemmaEntitiesByLemmaInAndSite(Collection<String> list, SiteEntity siteEntity);
+    List<LemmaEntity> findLemmaEntitiesByLemmaInAndSite(Collection<String> lemmas, SiteEntity siteEntity);
 
     @Modifying
     @Transactional
@@ -28,5 +28,5 @@ public interface LemmaRepository extends JpaRepository<LemmaEntity, Long> {
     @Modifying
     @Transactional
     @Query(value = "DELETE FROM lemmas WHERE site_id = :siteId AND frequency < 1", nativeQuery = true)
-    void deleteLemmasWithLowFrequencies(@Param("siteId") int siteId);
+    void deleteLemmasWithNoFrequencies(@Param("siteId") int siteId);
 }

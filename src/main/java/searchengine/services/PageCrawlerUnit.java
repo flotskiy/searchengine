@@ -42,7 +42,7 @@ public class PageCrawlerUnit extends RecursiveAction {
         } catch (Exception exception) {
             log.warn("Exception '{}' in PageCrawlerUnit while handling path: {}. " +
                     "Indexing for site '{}' completed with error", exception, pagePath, siteEntity.getUrl());
-            service.getStatusMap().put(siteEntity.getUrl(), Status.FAILED);
+            service.getSiteStatusMap().put(siteEntity.getUrl(), Status.FAILED);
             throw exception;
         }
     }
@@ -67,7 +67,7 @@ public class PageCrawlerUnit extends RecursiveAction {
             Document document = connection.get();
             html = document.outerHtml();
             service.savePageContentAndSiteStatusTime(pageEntity, html, siteEntity);
-            service.handleLemmasAndIndex(html, pageEntity, siteEntity);
+            service.extractLemmasAndIndexFromHtml(html, pageEntity, siteEntity);
             Elements anchors = document.select("body").select("a");
             handleAnchors(anchors, forkJoinPoolPagesList);
         }
@@ -83,7 +83,7 @@ public class PageCrawlerUnit extends RecursiveAction {
             if (StringUtil.isHrefValid(siteEntity.getUrl(), href, fileExtensions)
                     && !StringUtil.isPageAdded(service.getWebpagesPathSet(), href)) {
                 service.getWebpagesPathSet().add(href);
-                if (!service.getStatusMap().get(siteEntity.getUrl()).equals(Status.INDEXING)) {
+                if (!service.getSiteStatusMap().get(siteEntity.getUrl()).equals(Status.INDEXING)) {
                     return;
                 }
                 PageCrawlerUnit pageCrawlerUnit = new PageCrawlerUnit(service, siteEntity, href);

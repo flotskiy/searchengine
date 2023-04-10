@@ -53,10 +53,10 @@ public class IndexingServiceImpl implements IndexingService {
     private ForkJoinPool forkJoinPool = new ForkJoinPool();
     @Getter
     private Set<String> webpagesPathSet;
-    private ConcurrentMap<Integer, Map<String, LemmaEntity>> lemmasMap;
-    private ConcurrentMap<Integer, Set<IndexEntity>> indexEntityMap;
+    private ConcurrentMap<Integer, Map<String, LemmaEntity>> lemmasMapGropedBySiteId;
+    private ConcurrentMap<Integer, Set<IndexEntity>> indexEntityMapGropedBySiteId;
     @Getter
-    private ConcurrentMap<String, Status> statusMap;
+    private ConcurrentMap<String, Status> siteStatusMap;
 
     @Override
     public ResponseEntity<ApiResponse> startIndexing() {
@@ -112,7 +112,7 @@ public class IndexingServiceImpl implements IndexingService {
     public void savePageContentAndSiteStatusTime(PageEntity pageEntity, String pageHtml, SiteEntity siteEntity) {
         if (!forkJoinPool.isTerminating()
                 && !forkJoinPool.isTerminated()
-                && !statusMap.get(siteEntity.getUrl()).equals(Status.FAILED)) {
+                && !siteStatusMap.get(siteEntity.getUrl()).equals(Status.FAILED)) {
             savePageAndSite(pageEntity, pageHtml, siteEntity);
         }
     }
@@ -121,43 +121,43 @@ public class IndexingServiceImpl implements IndexingService {
         savePageAndSite(pageEntity, pageHtml, siteEntity);
     }
 
-    public void handleLemmasAndIndex(String html, PageEntity page, SiteEntity site) {
-        List<Map<String, Integer>> mapList = getUniqueLemmasListOfMaps(html);
-        for (String lemma : mapList.get(2).keySet()) {
-            Map<String, LemmaEntity> stringLemmaEntityMap = lemmasMap.get(site.getId());
+    public void extractLemmasAndIndexFromHtml(String html, PageEntity page, SiteEntity site) {
+        List<Map<String, Integer>> groupedLemmas = getGroupedLemmas(html);
+        for (String lemma : groupedLemmas.get(2).keySet()) { // index 2 contains all lemmas
+            Map<String, LemmaEntity> stringLemmaEntityMap = lemmasMapGropedBySiteId.get(site.getId());
             LemmaEntity lemmaEntity = stringLemmaEntityMap.get(lemma);
             if (lemmaEntity == null) {
                 lemmaEntity = new LemmaEntity();
                 lemmaEntity.setLemma(lemma);
                 lemmaEntity.setFrequency(1);
                 lemmaEntity.setSite(site);
-                lemmasMap.get(site.getId()).put(lemma, lemmaEntity);
+                lemmasMapGropedBySiteId.get(site.getId()).put(lemma, lemmaEntity);
             } else {
                 lemmaEntity.setFrequency(lemmaEntity.getFrequency() + 1);
             }
 
-            float lemmaRank = calculateLemmaRank(lemma, mapList.get(0), mapList.get(1));
+            float lemmaRank = calculateLemmaRank(lemma, groupedLemmas.get(0), groupedLemmas.get(1)); // 0 - title lemmas, 1 - body lemmas
             IndexEntity indexEntity = new IndexEntity(page, lemmaEntity, lemmaRank);
-            indexEntityMap.get(site.getId()).add(indexEntity);
+            indexEntityMapGropedBySiteId.get(site.getId()).add(indexEntity);
         }
     }
 
-    public List<Map<String, Integer>> getUniqueLemmasListOfMaps(String html) {
+    public List<Map<String, Integer>> getGroupedLemmas(String html) {
         Document htmlDocument = JsoupUtil.parse(html);
         String title = htmlDocument.title();
         String bodyText = htmlDocument.body().text();
 
-        Map<String, Integer> titleLemmasCount = lemmatizerService.getLemmasCountMap(title); // 0 list element
-        Map<String, Integer> bodyLemmasCount = lemmatizerService.getLemmasCountMap(bodyText); // 1 list element
-        Map<String, Integer> uniqueLemmasInTitleAndBody = Stream // 2 list element
+        Map<String, Integer> titleLemmasCount = lemmatizerService.getLemmasCountMap(title);
+        Map<String, Integer> bodyLemmasCount = lemmatizerService.getLemmasCountMap(bodyText);
+        Map<String, Integer> titleAndBodyLemmasCount = Stream
                 .concat(titleLemmasCount.entrySet().stream(), bodyLemmasCount.entrySet().stream())
                 .collect(Collectors.groupingBy(Map.Entry::getKey, Collectors.summingInt(Map.Entry::getValue)));
 
-        List<Map<String, Integer>> mapList = new ArrayList<>();
-        mapList.add(titleLemmasCount);
-        mapList.add(bodyLemmasCount);
-        mapList.add(uniqueLemmasInTitleAndBody);
-        return mapList;
+        List<Map<String, Integer>> groupedLemmasList = new ArrayList<>();
+        groupedLemmasList.add(titleLemmasCount);
+        groupedLemmasList.add(bodyLemmasCount);
+        groupedLemmasList.add(titleAndBodyLemmasCount);
+        return groupedLemmasList;
     }
 
     public void indexSinglePage(String pageUrl) {
@@ -176,10 +176,10 @@ public class IndexingServiceImpl implements IndexingService {
         } else {
             html = document.outerHtml();
             if (pageEntityDeleted != null) {
-                correctAllPageLemmaFrequency(html, siteEntity.getId());
+                reduceLemmaFrequenciesByOne(html, siteEntity.getId());
             }
             saveSinglePageContentAndSiteStatusTime(pageEntity, html, siteEntity);
-            handleLemmasAndIndexOnSinglePage(html, pageEntity, siteEntity);
+            extractLemmasAndIndexFromHtmlOnSinglePage(html, pageEntity, siteEntity);
         }
         fixSiteStatusAfterSinglePageIndexed(siteEntity);
     }
@@ -190,7 +190,7 @@ public class IndexingServiceImpl implements IndexingService {
         for (Site site : sites.getSites()) {
             currentSiteHomePage = StringUtil.getStartPage(site.getUrl());
             if (siteHomePageToSave.equalsIgnoreCase(currentSiteHomePage)) {
-                siteEntity = prepareSiteIndexing(site);
+                siteEntity = createAndPrepareSiteForIndexing(site);
                 break;
             }
         }
@@ -200,10 +200,10 @@ public class IndexingServiceImpl implements IndexingService {
     private void indexAll() {
         isIndexing = true;
         forkJoinPool = new ForkJoinPool();
-        lemmasMap = new ConcurrentHashMap<>();
-        indexEntityMap = new ConcurrentHashMap<>();
+        lemmasMapGropedBySiteId = new ConcurrentHashMap<>();
+        indexEntityMapGropedBySiteId = new ConcurrentHashMap<>();
         webpagesPathSet = Collections.synchronizedSet(new HashSet<>());
-        statusMap = new ConcurrentHashMap<>();
+        siteStatusMap = new ConcurrentHashMap<>();
         for (Site site : sites.getSites()) {
             Thread thread = new Thread(() -> indexSingleSite(site));
             thread.setName(site.getName());
@@ -232,17 +232,17 @@ public class IndexingServiceImpl implements IndexingService {
 
     private void indexSingleSite(Site site) {
         try {
-            PageCrawlerUnit pageCrawlerUnit = handleSite(site);
+            PageCrawlerUnit pageCrawlerUnit = initCollectionsForSiteAndCreateMainPageCrawlerUnit(site);
             forkJoinPool.invoke(pageCrawlerUnit);
-            fillInLemmasAndIndexTables(site);
+            fillInLemmaAndIndexTables(site);
             markSiteAsIndexed(site);
             log.info("Indexing SUCCESSFULLY completed for site '{}'", site.getName());
         } catch (Exception exception) {
             log.warn("FAILED to complete indexing '{}' due to '{}'", site.getName(), exception);
             fixSiteIndexingError(site, exception);
-            clearLemmasAndIndexCollections(site);
+            clearLemmaAndIndexCollections(site);
         } finally {
-            checkForCompletion();
+            markIndexingCompletionIfApplicable();
         }
     }
 
@@ -255,17 +255,17 @@ public class IndexingServiceImpl implements IndexingService {
         return siteEntity;
     }
 
-    private void handleLemmasAndIndexOnSinglePage(String html, PageEntity pageEntity, SiteEntity siteEntity) {
-        List<Map<String, Integer>> lemmasMapList = getUniqueLemmasListOfMaps(html);
-        Set<String> allUniquePageLemmas = lemmasMapList.get(2).keySet();
+    private void extractLemmasAndIndexFromHtmlOnSinglePage(String html, PageEntity pageEntity, SiteEntity siteEntity) {
+        List<Map<String, Integer>> groupedLemmas = getGroupedLemmas(html);
+        Set<String> allPageLemmas = groupedLemmas.get(2).keySet(); // index 2 contains all lemmas
         List<LemmaEntity> singlePageLemmaEntityList =
-                lemmaRepository.findLemmaEntitiesByLemmaInAndSite(allUniquePageLemmas, siteEntity);
+                lemmaRepository.findLemmaEntitiesByLemmaInAndSite(allPageLemmas, siteEntity);
         Map<String, LemmaEntity> lemmaEntityMap =
                 singlePageLemmaEntityList.stream().collect(Collectors.toMap(LemmaEntity::getLemma, Function.identity()));
 
         Set<LemmaEntity> lemmaEntities = new HashSet<>();
         Set<IndexEntity> indexEntities = new HashSet<>();
-        for (String lemma : allUniquePageLemmas) {
+        for (String lemma : allPageLemmas) {
             LemmaEntity lemmaEntity = lemmaEntityMap.get(lemma);
             if (lemmaEntity == null) {
                 lemmaEntity = new LemmaEntity(lemma, 1, siteEntity);
@@ -275,50 +275,50 @@ public class IndexingServiceImpl implements IndexingService {
             }
             lemmaEntities.add(lemmaEntity);
 
-            float lemmaRank = calculateLemmaRank(lemma, lemmasMapList.get(0), lemmasMapList.get(1));
+            float lemmaRank = calculateLemmaRank(lemma, groupedLemmas.get(0), groupedLemmas.get(1)); // 0 - title lemmas, 1 - body lemmas
             indexEntities.add(new IndexEntity(pageEntity, lemmaEntity, lemmaRank));
         }
         lemmaRepository.saveAll(lemmaEntities);
         indexRepository.saveAll(indexEntities);
     }
 
-    private void fillInLemmasAndIndexTables(Site site) {
+    private void fillInLemmaAndIndexTables(Site site) {
         String homePage = StringUtil.getStartPage(site.getUrl());
         int siteEntityId = siteRepository.findSiteEntityByUrl(homePage).getId();
-        Map<String, LemmaEntity> lemmaEntityMap = lemmasMap.get(siteEntityId);
+        Map<String, LemmaEntity> lemmaEntityMap = lemmasMapGropedBySiteId.get(siteEntityId);
         lemmaRepository.saveAll(lemmaEntityMap.values());
-        lemmasMap.get(siteEntityId).clear();
-        indexRepository.saveAll(indexEntityMap.get(siteEntityId));
-        indexEntityMap.get(siteEntityId).clear();
+        lemmasMapGropedBySiteId.get(siteEntityId).clear();
+        indexRepository.saveAll(indexEntityMapGropedBySiteId.get(siteEntityId));
+        indexEntityMapGropedBySiteId.get(siteEntityId).clear();
     }
 
-    private void clearLemmasAndIndexCollections(Site site) {
+    private void clearLemmaAndIndexCollections(Site site) {
         String homePage = StringUtil.getStartPage(site.getUrl());
         int siteEntityId = siteRepository.findSiteEntityByUrl(homePage).getId();
-        lemmasMap.get(siteEntityId).clear();
-        indexEntityMap.get(siteEntityId).clear();
+        lemmasMapGropedBySiteId.get(siteEntityId).clear();
+        indexEntityMapGropedBySiteId.get(siteEntityId).clear();
     }
 
-    private void correctAllPageLemmaFrequency(String text, int siteId) {
-        Map<String, Integer> allUniquePageLemmas = getUniqueLemmasListOfMaps(text).get(2);
+    private void reduceLemmaFrequenciesByOne(String text, int siteId) {
+        Map<String, Integer> allUniquePageLemmas = getGroupedLemmas(text).get(2); // index 2 contains all lemmas
         log.info("Correcting lemmas frequencies: reduce by one");
         lemmaRepository.reduceByOneLemmaFrequencies(siteId, allUniquePageLemmas.keySet());
-        lemmaRepository.deleteLemmasWithLowFrequencies(siteId);
+        lemmaRepository.deleteLemmasWithNoFrequencies(siteId);
     }
 
-    private PageCrawlerUnit handleSite(Site siteToHandle) {
-        SiteEntity siteEntity = prepareSiteIndexing(siteToHandle);
-        statusMap.put(siteEntity.getUrl(), Status.INDEXING);
+    private PageCrawlerUnit initCollectionsForSiteAndCreateMainPageCrawlerUnit(Site siteToHandle) {
+        SiteEntity siteEntity = createAndPrepareSiteForIndexing(siteToHandle);
+        siteStatusMap.put(siteEntity.getUrl(), Status.INDEXING);
         Map<String, LemmaEntity> stringLemmaEntityMap = new HashMap<>();
-        lemmasMap.put(siteEntity.getId(), stringLemmaEntityMap);
+        lemmasMapGropedBySiteId.put(siteEntity.getId(), stringLemmaEntityMap);
         Set<IndexEntity> indexEntitySet = new HashSet<>();
-        indexEntityMap.put(siteEntity.getId(), indexEntitySet);
+        indexEntityMapGropedBySiteId.put(siteEntity.getId(), indexEntitySet);
         String siteHomePage = siteEntity.getUrl();
         webpagesPathSet.add(siteHomePage);
         return new PageCrawlerUnit(this, siteEntity, siteHomePage);
     }
 
-    private void checkForCompletion() {
+    private void markIndexingCompletionIfApplicable() {
         List<SiteEntity> allSites = siteRepository.findAll();
         for (SiteEntity site : allSites) {
             if (site.getStatus().equals(Status.INDEXING)) {
@@ -349,7 +349,7 @@ public class IndexingServiceImpl implements IndexingService {
         siteRepository.save(site);
     }
 
-    private SiteEntity prepareSiteIndexing(Site site) {
+    private SiteEntity createAndPrepareSiteForIndexing(Site site) {
         String homePage = StringUtil.getStartPage(site.getUrl());
         SiteEntity oldSiteEntity = siteRepository.findSiteEntityByUrl(homePage);
         if (oldSiteEntity != null) {

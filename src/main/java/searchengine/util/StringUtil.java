@@ -15,6 +15,7 @@ import java.util.TreeMap;
 public class StringUtil {
 
     private final String SLASH = "/";
+    private final StringBuilder BUILDER = new StringBuilder();
 
     public String cutSlash(String siteNameWithSlash) {
         return siteNameWithSlash.substring(0, siteNameWithSlash.length() - 1);
@@ -45,7 +46,7 @@ public class StringUtil {
     }
 
     public String buildSnippet(List<String> textList, List<Integer> lemmasPositions, int snippetBorder) {
-        StringBuilder builder = new StringBuilder();
+        BUILDER.setLength(0);
         int start = 0;
         int end = -1;
 
@@ -56,7 +57,7 @@ public class StringUtil {
                 end = entry.getValue();
                 continue;
             }
-            buildStringBuilder(builder, textList, lemmasPositions, start, end);
+            buildString(textList, lemmasPositions, start, end);
             start = entry.getKey();
             if (start < 0) {
                 start = 0;
@@ -66,14 +67,14 @@ public class StringUtil {
                 end = textList.size() - 1;
             }
             if (isLastEntry(entry, lemmasPositions, snippetBorder)) {
-                buildStringBuilder(builder, textList, lemmasPositions, start, end);
+                buildString(textList, lemmasPositions, start, end);
             }
         }
-        if (builder.toString().isEmpty()) {
+        if (BUILDER.toString().isEmpty()) {
             end = textList.size() - 1;
-            buildStringBuilder(builder, textList, lemmasPositions, start, end);
+            buildString(textList, lemmasPositions, start, end);
         }
-        return builder.toString();
+        return BUILDER.toString();
     }
 
     public boolean isStringExists(String s) {
@@ -117,20 +118,18 @@ public class StringUtil {
         return (entry.getValue() - snippetBorder) == lemmasPositions.get(lemmasPositions.size() - 1);
     }
 
-    private void buildStringBuilder(
-            StringBuilder builder, List<String> textList, List<Integer> lemmasPositions, int start, int end
-    ) {
+    private void buildString(List<String> textList, List<Integer> lemmasPositions, int start, int end) {
         for (int i = start; i <= end; i++) {
             if (i == start) {
-                builder.append("... ");
+                BUILDER.append("... ");
             }
             if (lemmasPositions.contains(i)) {
-                builder.append("<b>").append(textList.get(i)).append("</b>").append(" ");
+                BUILDER.append("<b>").append(textList.get(i)).append("</b>").append(" ");
             } else {
-                builder.append(textList.get(i)).append(" ");
+                BUILDER.append(textList.get(i)).append(" ");
             }
             if (i == end) {
-                builder.deleteCharAt(builder.length() - 1).append(" ...&emsp;&emsp;");
+                BUILDER.deleteCharAt(BUILDER.length() - 1).append(" ...&emsp;&emsp;");
             }
         }
     }

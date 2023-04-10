@@ -46,7 +46,7 @@ public class SearchServiceImpl implements SearchService {
         } else if (isIndexingOrFailed(site)) {
             searchResult.setError("Indexing not finished yet successfully");
         } else {
-            searchResult = getSearchResultPageList(query, site, offset, limit);
+            searchResult = getSearchResult(query, site, offset, limit);
         }
         return ResponseEntity.ok(searchResult);
     }
@@ -64,14 +64,14 @@ public class SearchServiceImpl implements SearchService {
         return siteRepository.existsByStatus(Status.INDEXING) || siteRepository.existsByStatus(Status.FAILED);
     }
 
-    private SearchResultResponse getSearchResultPageList(String query, String site, int offset, int limit) {
+    private SearchResultResponse getSearchResult(String query, String site, int offset, int limit) {
         site = site + "/";
-        SearchResultResponse searchResult = getSearchResultPageList(query, site);
+        SearchResultResponse searchResult = getSearchResult(query, site);
 
-        int noOfPagesResult = searchResult.getCount();
-        int dataArrayEndIndex = Math.min(noOfPagesResult, offset + limit);
+        int noOfPages = searchResult.getCount();
+        int dataArrayEndIndex = Math.min(noOfPages, offset + limit);
         int dataValueSize;
-        if (noOfPagesResult < offset) {
+        if (noOfPages < offset) {
             dataValueSize = 0;
         } else {
             dataValueSize = dataArrayEndIndex - offset;
@@ -85,7 +85,7 @@ public class SearchServiceImpl implements SearchService {
         return searchResult;
     }
 
-    private SearchResultResponse getSearchResultPageList(String query, String siteUrl) {
+    private SearchResultResponse getSearchResult(String query, String siteUrl) {
         SearchResultResponse searchResultResponse = new SearchResultResponse();
         searchResultResponse.setResult(true);
 
@@ -98,16 +98,16 @@ public class SearchServiceImpl implements SearchService {
         }
 
         Set<Integer> pagesIdSet = getAllPagesId(sortedLemmasFromQuery);
-        List<PageEntity> pages = pageRepository.findAllById(pagesIdSet);
+        List<PageEntity> pagesFound = pageRepository.findAllById(pagesIdSet);
         if (searchingSite == null) {
-            pages = filterPages(pages, sortedLemmasFromQuery, frequentLemmas);
+            pagesFound = filterPages(pagesFound, sortedLemmasFromQuery, frequentLemmas);
         }
-        if (pages.isEmpty()) {
+        if (pagesFound.isEmpty()) {
             return returnEmptySearchResult(searchResultResponse);
         }
 
-        List<SearchResultPage> pagesFoundList = getSortedSearchResultPageList(pages, sortedLemmasFromQuery);
-        return putPagesIntoSearchResultResponse(searchResultResponse, pagesFoundList);
+        List<SearchResultPage> pagesFoundSorted = getSortedPages(pagesFound, sortedLemmasFromQuery);
+        return putPagesIntoSearchResultResponse(searchResultResponse, pagesFoundSorted);
     }
 
     private SearchResultResponse putPagesIntoSearchResultResponse(
@@ -151,7 +151,7 @@ public class SearchServiceImpl implements SearchService {
         return null;
     }
 
-    private List<SearchResultPage> getSortedSearchResultPageList(List<PageEntity> pages,  List<LemmaEntity> lemmaList) {
+    private List<SearchResultPage> getSortedPages(List<PageEntity> pages, List<LemmaEntity> lemmaList) {
         List<SearchResultPage> searchResultPageList = new ArrayList<>();
         List<Integer> lemmasIdList = lemmaList.stream().map(LemmaEntity::getId).toList();
         Set<String> lemmasStringSet = lemmaList.stream().map(LemmaEntity::getLemma).collect(Collectors.toSet());
@@ -170,16 +170,16 @@ public class SearchServiceImpl implements SearchService {
     }
 
     private SearchResultPage createSearchResultPage(
-            PageEntity pageEntity, List<Integer> lemmasIdList, Set<String> lemmasString
+            PageEntity pageEntity, List<Integer> lemmasIdList, Set<String> lemmasStringSet
     ) {
-        SiteEntity tempSite = pageEntity.getSite();
-        String siteUrl = StringUtil.cutSlash(tempSite.getUrl());
-        String siteName = tempSite.getName();
+        SiteEntity site = pageEntity.getSite();
+        String siteUrl = StringUtil.cutSlash(site.getUrl());
+        String siteName = site.getName();
         String pagePath = pageEntity.getPath();
         Document document = Jsoup.parse(pageEntity.getContent());
         String title = document.title();
 
-        String snippet = getSnippet(document, lemmasString);
+        String snippet = getSnippet(document, lemmasStringSet);
         Float relevanceWrapped = indexRepository.getAbsRelevance(pageEntity.getId(), lemmasIdList);
         float relevance = relevanceWrapped == null ? 0 : relevanceWrapped;
 
@@ -210,7 +210,7 @@ public class SearchServiceImpl implements SearchService {
     private Set<Integer> findPagesId(List<String> lemmasSorted, Map<String, Set<Integer>> gropedLemmaIdMap) {
         String firstLemma = lemmasSorted.get(0);
         Set<Integer> firstLemmaIdsSet = gropedLemmaIdMap.get(firstLemma);
-        Set<Integer> pagesIdResultSet = indexRepository.findPagesIdsByLemmaIdIn(firstLemmaIdsSet);
+        Set<Integer> pagesIdResultSet = indexRepository.findPagesIdByLemmaIdIn(firstLemmaIdsSet);
 
         String currentLemma;
         Set<Integer> currentLemmasIdSet;
@@ -219,7 +219,7 @@ public class SearchServiceImpl implements SearchService {
             pagesIdTempSet.clear();
             currentLemma = lemmasSorted.get(i);
             currentLemmasIdSet = gropedLemmaIdMap.get(currentLemma);
-            pagesIdTempSet = indexRepository.findPagesIdsByLemmaIdIn(currentLemmasIdSet);
+            pagesIdTempSet = indexRepository.findPagesIdByLemmaIdIn(currentLemmasIdSet);
             pagesIdResultSet.retainAll(pagesIdTempSet);
             if (pagesIdResultSet.isEmpty()) {
                 return Collections.emptySet();
@@ -254,7 +254,7 @@ public class SearchServiceImpl implements SearchService {
 
         Map<Integer, String> textMapLemmatized =
                 textListLemmatized.stream().collect(HashMap::new, (map, s) -> map.put(map.size(), s), Map::putAll);
-        Map<Integer, String> filteredMap = textMapLemmatized.entrySet().stream()
+        Map<Integer, String> filteredTextMapLemmatized = textMapLemmatized.entrySet().stream()
                 .filter(e -> {
                     for (String queryWord : querySet) {
                         if (queryWord.equals(e.getValue())) {
@@ -263,7 +263,7 @@ public class SearchServiceImpl implements SearchService {
                     }
                     return false;
                 }).collect(HashMap::new, (map, e) -> map.put(e.getKey(), e.getValue()), Map::putAll);
-        List<Integer> lemmasPositions = new ArrayList<>(filteredMap.keySet());
+        List<Integer> lemmasPositions = new ArrayList<>(filteredTextMapLemmatized.keySet());
         lemmasPositions.sort(Integer::compareTo);
 
         if (lemmasPositions.isEmpty()) {
@@ -274,22 +274,22 @@ public class SearchServiceImpl implements SearchService {
 
     private List<LemmaEntity> getFrequentLemmas(List<SiteEntity> siteEntityList, List<LemmaEntity> lemmaList) {
         Map<Integer, Float> frequentWordsBorderMap = get95perCentFrequencyLimitForEachSite(siteEntityList);
-        List<LemmaEntity> removedLemmas = new ArrayList<>();
+        List<LemmaEntity> frequentLemmas = new ArrayList<>();
         for (LemmaEntity lemma : new ArrayList<>(lemmaList)) {
             int siteId = lemma.getSite().getId();
             if (lemma.getFrequency() > frequentWordsBorderMap.get(siteId)) {
-                removedLemmas.add(lemma);
+                frequentLemmas.add(lemma);
             }
         }
-        return removedLemmas;
+        return frequentLemmas;
     }
 
     private Map<Integer, Float> get95perCentFrequencyLimitForEachSite(List<SiteEntity> siteList) {
         Map<Integer, Float> frequencyMap = new HashMap<>();
         for (SiteEntity site : siteList) {
             int id = site.getId();
-            float occurrenceOf95perCentLimit = pageRepository.get95perCentPagesLimit(id);
-            frequencyMap.put(id, occurrenceOf95perCentLimit);
+            float valueOf95perCentLimit = pageRepository.get95perCentPageFrequencyOccurrence(id);
+            frequencyMap.put(id, valueOf95perCentLimit);
         }
         return frequencyMap;
     }

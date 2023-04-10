@@ -15,5 +15,5 @@ public interface IndexRepository extends JpaRepository<IndexEntity, Long> {
     float getAbsRelevance(@Param("pageId") int pageId, @Param("lemmaIds") Collection<Integer> lemmaIds);
 
     @Query(value = "SELECT page_id FROM Search_index WHERE lemma_id IN :lemmaIds", nativeQuery = true)
-    Set<Integer> findPagesIdsByLemmaIdIn(@Param("lemmaIds") Collection<Integer> lemmaIds);
+    Set<Integer> findPagesIdByLemmaIdIn(@Param("lemmaIds") Collection<Integer> lemmaIds);
 }
