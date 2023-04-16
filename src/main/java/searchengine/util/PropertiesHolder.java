@@ -34,4 +34,7 @@ public class PropertiesHolder {
 
     @Value("${error.unknown}")
     private String unknownError;
+
+    @Value("${page.frequency.limit}")
+    private int pageFrequencyLimit;
 }

@@ -273,7 +273,7 @@ public class SearchServiceImpl implements SearchService {
     }
 
     private List<LemmaEntity> getFrequentLemmas(List<SiteEntity> siteEntityList, List<LemmaEntity> lemmaList) {
-        Map<Integer, Float> frequentWordsBorderMap = get95perCentFrequencyLimitForEachSite(siteEntityList);
+        Map<Integer, Float> frequentWordsBorderMap = getFrequencyLimitForEachSite(siteEntityList);
         List<LemmaEntity> frequentLemmas = new ArrayList<>();
         for (LemmaEntity lemma : new ArrayList<>(lemmaList)) {
             int siteId = lemma.getSite().getId();
@@ -284,12 +284,12 @@ public class SearchServiceImpl implements SearchService {
         return frequentLemmas;
     }
 
-    private Map<Integer, Float> get95perCentFrequencyLimitForEachSite(List<SiteEntity> siteList) {
+    private Map<Integer, Float> getFrequencyLimitForEachSite(List<SiteEntity> siteList) {
         Map<Integer, Float> frequencyMap = new HashMap<>();
         for (SiteEntity site : siteList) {
             int id = site.getId();
-            float valueOf95perCentLimit = pageRepository.get95perCentPageFrequencyOccurrence(id);
-            frequencyMap.put(id, valueOf95perCentLimit);
+            float limit = pageRepository.getPageFrequencyOccurrence(properties.getPageFrequencyLimit(), id);
+            frequencyMap.put(id, limit);
         }
         return frequencyMap;
     }

@@ -36,6 +36,10 @@ selector:
 snippet:
   border: 5
 
+page:
+  frequency:
+    limit: 95
+
 error:
   interrupted: Indexing stopped by user
   certificate: Site's certificate validity check failed
