@@ -18,8 +18,12 @@ indexing-settings:
   sites:
     - url: https://www.svetlovka.ru/
       name: Светловка
-    - url: https://et-cetera.ru/
-      name: Театр
+    - url: http://museumgorkogo.ru/
+      name: Музей Горького
+    - url: https://nizhny800.ru/
+      name: НН800
+    - url: http://www.playback.ru/
+      name: PlayBack
 
 connect:
   useragent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.5060.53 Safari/537.36

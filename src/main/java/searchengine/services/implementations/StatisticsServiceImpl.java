@@ -43,7 +43,8 @@ public class StatisticsServiceImpl implements StatisticsService {
             item.setPages(pages);
             item.setLemmas(lemmas);
             item.setStatus(siteEntity.getStatus().toString());
-            item.setError(siteEntity.getLastError());
+            String error = siteEntity.getLastError();
+            item.setError(error == null ? "No errors \u2705" : error);
             item.setStatusTime(siteEntity.getStatusTime().getTime());
             total.setPages(total.getPages() + pages);
             total.setLemmas(total.getLemmas() + lemmas);

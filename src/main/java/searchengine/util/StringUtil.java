@@ -102,13 +102,13 @@ public class StringUtil {
     }
 
     public String getHrefFromAnchor(Element anchor) {
-        String href = anchor.absUrl("href");
+        String href = anchor.absUrl("href").trim().replace("\u00A0", "");
         href = href.endsWith(SLASH) ? href : href + SLASH;
         return href.replace("//www.", "//");
     }
 
     private boolean isHrefToPage(String href, String fileExtensions) {
-        if (href.matches(".*(#|\\?).*")) {
+        if (href.matches(".*([#?\"@\\\\]).*")) {
             return false;
         }
         return !href.matches(".*\\.(" + fileExtensions + ")/?");
@@ -120,16 +120,13 @@ public class StringUtil {
 
     private void buildString(List<String> textList, List<Integer> lemmasPositions, int start, int end) {
         for (int i = start; i <= end; i++) {
-            if (i == start) {
-                BUILDER.append("... ");
-            }
             if (lemmasPositions.contains(i)) {
                 BUILDER.append("<b>").append(textList.get(i)).append("</b>").append(" ");
             } else {
                 BUILDER.append(textList.get(i)).append(" ");
             }
             if (i == end) {
-                BUILDER.deleteCharAt(BUILDER.length() - 1).append(" ...&emsp;&emsp;");
+                BUILDER.deleteCharAt(BUILDER.length() - 1).append("&emsp;&emsp;");
             }
         }
     }

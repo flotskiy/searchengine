@@ -269,7 +269,10 @@ public class SearchServiceImpl implements SearchService {
         if (lemmasPositions.isEmpty()) {
             return "";
         }
-        return StringUtil.buildSnippet(textList, lemmasPositions, properties.getSnippetBorder());
+        String fullSnippet = StringUtil.buildSnippet(textList, lemmasPositions, properties.getSnippetBorder());
+        String[] snippetParts = fullSnippet.split("&emsp;&emsp;");
+        String finalSnippet = Arrays.stream(snippetParts).max(Comparator.comparingInt(String::length)).orElse("");
+        return "... ".concat(finalSnippet).concat(" ...");
     }
 
     private List<LemmaEntity> getFrequentLemmas(List<SiteEntity> siteEntityList, List<LemmaEntity> lemmaList) {
